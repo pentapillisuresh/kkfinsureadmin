@@ -1,303 +1,215 @@
-import React, { useEffect, useState } from 'react';
-import { useAppContext } from '../context/AppContext';
-import { 
-  FiUsers, FiUserCheck, FiUserX, FiDollarSign, 
-  FiTrendingUp, FiTrendingDown, FiClock, FiCalendar,
-  FiBarChart2, FiPieChart, FiActivity
-} from 'react-icons/fi';
-import { formatCurrency } from '../utils/helpers';
+import React, { useState, useEffect } from 'react';
+import { adminApi } from '../api/adminApi';
+import StatsCard from '../components/common/StatsCard';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  AreaChart, Area
+  FaUsers,
+  FaWallet,
+  FaMoneyBillWave,
+  FaTicketAlt,
+  FaUserPlus,
+  FaChartLine,
+} from 'react-icons/fa';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
-  const { getDashboardStats, clients } = useAppContext();
-  const stats = getDashboardStats();
-
-  const [investmentData, setInvestmentData] = useState([]);
-  const [monthlyData, setMonthlyData] = useState([]);
-  const [productData, setProductData] = useState([]);
-  const [roiData, setRoiData] = useState([]);
-  const [recentActivities, setRecentActivities] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [recentUsers, setRecentUsers] = useState([]);
 
   useEffect(() => {
-    // Generate investment growth data
-    const data = [];
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const month = date.toLocaleString('default', { month: 'short' });
-      const value = 500000 + Math.random() * 1500000;
-      data.push({ month, value: Math.round(value) });
-    }
-    setInvestmentData(data);
+    fetchDashboardData();
+  }, []);
 
-    // Monthly investment data
-    const monthly = [];
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const month = date.toLocaleString('default', { month: 'short' });
-      monthly.push({
-        month,
-        investments: Math.round(200000 + Math.random() * 800000),
-        withdrawals: Math.round(50000 + Math.random() * 300000)
-      });
-    }
-    setMonthlyData(monthly);
+  const fetchDashboardData = async () => {
+    try {
+      const [statsRes, usersRes] = await Promise.all([
+        adminApi.getDashboardStats(),
+        adminApi.getUsers({ page: 1, limit: 5 }),
+      ]);
 
-    // Product-wise investment
-    setProductData([
-      { name: 'Falcon Hedge', value: stats.falconInvestment || 0 },
-      { name: 'AIF', value: stats.aifInvestment || 0 },
-      { name: 'PMS', value: stats.pmsInvestment || 0 },
-      { name: 'SIF', value: stats.sifInvestment || 0 }
-    ]);
-
-    // ROI Performance
-    const roi = [];
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const month = date.toLocaleString('default', { month: 'short' });
-      roi.push({
-        month,
-        roi: 2 + Math.random() * 6,
-        target: 4 + Math.random() * 2
-      });
-    }
-    setRoiData(roi);
-
-    // Recent Activities
-    const activities = [];
-    clients.forEach(client => {
-      if (client.createdAt) {
-        activities.push({
-          type: 'New Client Added',
-          description: `${client.fullName} registered`,
-          date: client.createdAt,
-          icon: FiUsers
-        });
+      if (statsRes.success) {
+        setStats(statsRes.data);
       }
-      client.investments?.forEach(inv => {
-        activities.push({
-          type: 'Investment Added',
-          description: `${client.fullName} invested ${formatCurrency(inv.amount)} in ${inv.product}`,
-          date: inv.date,
-          icon: FiDollarSign
-        });
-      });
-    });
-    activities.sort((a, b) => new Date(b.date) - new Date(a.date));
-    setRecentActivities(activities.slice(0, 10));
-  }, [clients]);
 
-  const COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B'];
+      if (usersRes.success) {
+        setRecentUsers(usersRes.data.users || []);
+      }
+    } catch (error) {
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
-    <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
-          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
-        </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
-        </div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner />
       </div>
-    </div>
-  );
+    );
+  }
+
+  const statCards = [
+    {
+      title: 'Total Users',
+      value: stats?.totalUsers || 0,
+      icon: FaUsers,
+      color: 'bg-blue-500',
+      change: `+${stats?.newUsersThisMonth || 0} this month`,
+    },
+    {
+      title: 'Active Investments',
+      value: stats?.activeInvestments || 0,
+      icon: FaWallet,
+      color: 'bg-green-500',
+      change: `₹${(stats?.totalInvestmentAmount || 0).toLocaleString()}`,
+    },
+    {
+      title: 'Total Returns',
+      value: `₹${(stats?.returnsThisMonth || 0).toLocaleString()}`,
+      icon: FaMoneyBillWave,
+      color: 'bg-purple-500',
+      change: 'This month',
+    },
+    {
+      title: 'Pending Tickets',
+      value: stats?.pendingTickets || 0,
+      icon: FaTicketAlt,
+      color: 'bg-orange-500',
+      change: 'Need attention',
+    },
+  ];
+
+  // Sample chart data - in production, fetch from API
+  const monthlyData = [
+    { month: 'Jan', users: 30, investments: 45 },
+    { month: 'Feb', users: 45, investments: 52 },
+    { month: 'Mar', users: 52, investments: 60 },
+    { month: 'Apr', users: 58, investments: 68 },
+    { month: 'May', users: 70, investments: 75 },
+    { month: 'Jun', users: 82, investments: 90 },
+  ];
+
+  const pieData = [
+    { name: 'Active', value: stats?.activeInvestments || 0 },
+    { name: 'Matured', value: stats?.totalUsers || 0 },
+  ];
+
+  const COLORS = ['#3b82f6', '#10b981'];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <p className="text-gray-500">Complete business statistics at a glance</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((stat) => (
+          <StatsCard key={stat.title} {...stat} />
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Clients"
-          value={stats.totalClients}
-          icon={FiUsers}
-          color="bg-blue-500"
-        />
-        <StatCard
-          title="Active Clients"
-          value={stats.activeClients}
-          icon={FiUserCheck}
-          color="bg-green-500"
-          subtitle={`${stats.inactiveClients} inactive`}
-        />
-        <StatCard
-          title="Total Investment (AUM)"
-          value={formatCurrency(stats.totalInvestment)}
-          icon={FiDollarSign}
-          color="bg-purple-500"
-        />
-        <StatCard
-          title="Monthly ROI Payable"
-          value={formatCurrency(stats.totalMonthlyROI)}
-          icon={FiTrendingUp}
-          color="bg-indigo-500"
-          subtitle={`Paid: ${formatCurrency(stats.monthlyROIPaid)} | Pending: ${formatCurrency(stats.monthlyROIPending)}`}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Falcon Hedge Fund"
-          value={formatCurrency(stats.falconInvestment)}
-          icon={FiPieChart}
-          color="bg-emerald-500"
-        />
-        <StatCard
-          title="AIF Investment"
-          value={formatCurrency(stats.aifInvestment)}
-          icon={FiPieChart}
-          color="bg-pink-500"
-        />
-        <StatCard
-          title="PMS Investment"
-          value={formatCurrency(stats.pmsInvestment)}
-          icon={FiBarChart2}
-          color="bg-orange-500"
-        />
-        <StatCard
-          title="SIF Investment"
-          value={formatCurrency(stats.sifInvestment)}
-          icon={FiBarChart2}
-          color="bg-teal-500"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Upcoming Maturity"
-          value={stats.upcomingMaturity}
-          icon={FiCalendar}
-          color="bg-red-500"
-        />
-        <StatCard
-          title="Total Active Investments"
-          value={stats.totalActiveInvestments}
-          icon={FiTrendingUp}
-          color="bg-cyan-500"
-        />
-        <StatCard
-          title="Pending Monthly ROI"
-          value={formatCurrency(stats.monthlyROIPending)}
-          icon={FiClock}
-          color="bg-yellow-500"
-        />
-        <StatCard
-          title="Monthly ROI Paid"
-          value={formatCurrency(stats.monthlyROIPaid)}
-          icon={FiTrendingDown}
-          color="bg-green-500"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Investment Growth</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={investmentData}>
-              <defs>
-                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="month" />
-              <YAxis />
-              <CartesianGrid strokeDasharray="3 3" />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Area type="monotone" dataKey="value" stroke="#3B82F6" fillOpacity={1} fill="url(#colorValue)" />
-            </AreaChart>
-          </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 card">
+          <h3 className="text-lg font-semibold mb-4">Monthly Activity</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="users" fill="#3b82f6" name="New Users" />
+                <Bar dataKey="investments" fill="#10b981" name="Investments" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Investment</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyData}>
-              <XAxis dataKey="month" />
-              <YAxis />
-              <CartesianGrid strokeDasharray="3 3" />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Legend />
-              <Bar dataKey="investments" fill="#3B82F6" name="Investments" />
-              <Bar dataKey="withdrawals" fill="#EF4444" name="Withdrawals" />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4">Investment Overview</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Product-wise Investment</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={productData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {productData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">ROI Performance</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={roiData}>
-              <XAxis dataKey="month" />
-              <YAxis />
-              <CartesianGrid strokeDasharray="3 3" />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="roi" stroke="#3B82F6" name="Actual ROI" />
-              <Line type="monotone" dataKey="target" stroke="#EF4444" name="Target ROI" strokeDasharray="5 5" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Activities</h3>
-        <div className="space-y-4">
-          {recentActivities.map((activity, index) => (
-            <div key={index} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <activity.icon className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-800">{activity.type}</p>
-                <p className="text-sm text-gray-500">{activity.description}</p>
-              </div>
-              <span className="text-sm text-gray-400">
-                {new Date(activity.date).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric'
-                })}
-              </span>
-            </div>
-          ))}
+      <div className="card">
+        <h3 className="text-lg font-semibold mb-4">Recent Users</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Name</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Email</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Phone</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-4 text-gray-500">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                recentUsers.map((user) => (
+                  <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4 text-sm">{user.fullName}</td>
+                    <td className="py-3 px-4 text-sm">{user.email}</td>
+                    <td className="py-3 px-4 text-sm">{user.phone || 'N/A'}</td>
+                    <td className="py-3 px-4 text-sm">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          user.isActive
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

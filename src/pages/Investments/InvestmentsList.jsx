@@ -1,176 +1,216 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../../context/AppContext';
-import { FiPlus, FiSearch, FiEye, FiEdit, FiTrash2, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import { formatCurrency, formatDate, getStatusColor } from '../../utils/helpers';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { investmentApi } from '../../api/investmentApi';
+import { planApi } from '../../api/planApi';
+import SearchBar from '../../components/common/SearchBar';
+import Pagination from '../../components/common/Pagination';
+import StatusBadge from '../../components/common/StatusBadge';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import CreateInvestmentModal from '../../components/modals/CreateInvestmentModal';
+import { FaPlus, FaEye, FaEdit, FaTrash, FaCheckCircle } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 const InvestmentsList = () => {
-  const navigate = useNavigate();
-  const { clients } = useAppContext();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
-  const [filterProduct, setFilterProduct] = useState('all');
+  const [investments, setInvestments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [plans, setPlans] = useState([]);
 
-  // Flatten all investments from all clients
-  const allInvestments = [];
-  clients.forEach(client => {
-    client.investments?.forEach(inv => {
-      allInvestments.push({
-        ...inv,
-        clientName: client.fullName,
-        clientId: client.clientId,
-        clientEmail: client.email,
-        clientMobile: client.mobile
+  useEffect(() => {
+    fetchInvestments();
+    fetchPlans();
+  }, [pagination.page, search, statusFilter]);
+
+  const fetchInvestments = async () => {
+    setLoading(true);
+    try {
+      const response = await investmentApi.getAll({
+        page: pagination.page,
+        limit: pagination.limit,
+        status: statusFilter || undefined,
       });
-    });
-  });
+      if (response.success) {
+        setInvestments(response.data.investments);
+        setPagination(response.data.pagination);
+      }
+    } catch (error) {
+      toast.error('Failed to fetch investments');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredInvestments = allInvestments.filter(inv => {
-    const matchesSearch = 
-      inv.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.clientId.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesProduct = filterProduct === 'all' || inv.product === filterProduct;
-    
-    return matchesSearch && matchesProduct;
-  });
+  const fetchPlans = async () => {
+    try {
+      const response = await planApi.getAll({ isActive: true });
+      if (response.success) {
+        setPlans(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch plans');
+    }
+  };
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredInvestments.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredInvestments.length / itemsPerPage);
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this investment?')) return;
+    try {
+      const response = await investmentApi.delete(id);
+      if (response.success) {
+        toast.success('Investment deleted successfully');
+        fetchInvestments();
+      }
+    } catch (error) {
+      toast.error('Failed to delete investment');
+    }
+  };
 
-  const products = ['Falcon Hedge Fund', 'Alternative Investment Fund', 'PMS', 'SIF'];
+  const handleApproveDPC = async (id) => {
+    try {
+      const response = await investmentApi.approveDPC(id);
+      if (response.success) {
+        toast.success('DPC approved successfully');
+        fetchInvestments();
+      }
+    } catch (error) {
+      toast.error('Failed to approve DPC');
+    }
+  };
+
+  const handleCreate = async (data) => {
+    try {
+      const response = await investmentApi.create(data);
+      if (response.success) {
+        toast.success('Investment created successfully');
+        setShowCreateModal(false);
+        fetchInvestments();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to create investment');
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Investments</h1>
-          <p className="text-gray-500">Manage all client investments</p>
-        </div>
+        <h2 className="text-2xl font-bold text-gray-900">Investments</h2>
         <button
-          onClick={() => navigate('/investments/add')}
+          onClick={() => setShowCreateModal(true)}
           className="btn-primary flex items-center gap-2"
         >
-          <FiPlus className="w-5 h-5" />
-          Add Investment
+          <FaPlus /> Add Investment
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search investments..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-input pl-10"
-            />
-          </div>
-          <select
-            value={filterProduct}
-            onChange={(e) => setFilterProduct(e.target.value)}
-            className="form-input w-48"
-          >
-            <option value="all">All Products</option>
-            {products.map(product => (
-              <option key={product} value={product}>{product}</option>
-            ))}
-          </select>
-        </div>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Search investments..."
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="input-field max-w-xs"
+        >
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="matured">Matured</option>
+          <option value="closed">Closed</option>
+        </select>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Investment ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ROI</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly ROI</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">User</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Plan</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">DPC</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
-              {currentItems.map((inv) => (
-                <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{inv.id?.slice(0, 8) || 'N/A'}</td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{inv.clientName}</div>
-                      <div className="text-xs text-gray-500">{inv.clientId}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{inv.product}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{formatCurrency(inv.amount)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{inv.roi}%</td>
-                  <td className="px-6 py-4 text-sm font-medium text-green-600">{formatCurrency(inv.monthlyROI)}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(inv.status)}`}>
-                      {inv.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="View">
-                        <FiEye className="w-4 h-4" />
-                      </button>
-                      <button className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors" title="Edit">
-                        <FiEdit className="w-4 h-4" />
-                      </button>
-                      <button className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete">
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-8">
+                    <LoadingSpinner />
                   </td>
                 </tr>
-              ))}
+              ) : investments.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-8 text-gray-500">
+                    No investments found
+                  </td>
+                </tr>
+              ) : (
+                investments.map((inv) => (
+                  <tr key={inv.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4 text-sm">{inv.user?.fullName || 'N/A'}</td>
+                    <td className="py-3 px-4 text-sm">{inv.plan?.name || 'N/A'}</td>
+                    <td className="py-3 px-4 text-sm font-medium">
+                      ₹{parseFloat(inv.amount).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      <StatusBadge status={inv.status} />
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {inv.dpcCheck ? (
+                        <span className="text-green-600">✓ Approved</span>
+                      ) : (
+                        <button
+                          onClick={() => handleApproveDPC(inv.id)}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          <FaCheckCircle className="inline mr-1" /> Approve
+                        </button>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/investments/${inv.id}`}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View"
+                        >
+                          <FaEye />
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(inv.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-
-        {filteredInvestments.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No investments found
-          </div>
-        )}
-
-        {filteredInvestments.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredInvestments.length)} of {filteredInvestments.length} investments
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FiChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm text-gray-700">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FiChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {pagination.totalPages > 1 && (
+        <Pagination
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          onPageChange={(page) => setPagination({ ...pagination, page })}
+        />
+      )}
+
+      <CreateInvestmentModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreate}
+        plans={plans}
+      />
     </div>
   );
 };
