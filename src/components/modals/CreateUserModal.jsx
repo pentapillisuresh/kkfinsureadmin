@@ -1,222 +1,180 @@
 // src/components/modals/CreateUserModal.jsx
 import React, { useState } from 'react';
-import { 
-  FiX, FiUser, FiMail, FiPhone, FiCalendar, 
+import {
+  FiX, FiUser, FiMail, FiPhone, FiCalendar,
   FiMapPin, FiCreditCard, FiLock, FiUserPlus,
-  FiFileText, FiAward, FiCheck, FiArrowRight, FiArrowLeft,
+  FiFileText, FiCheck, FiArrowRight, FiArrowLeft,
   FiUpload, FiImage, FiFile, FiTrash2
 } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import { authApi } from '../../api/authApi'; // adjust path
+import { nomineeApi } from '../../api/nomineeApi'; // adjust path
+import { filesAPI } from '../../api/files'; // adjust path
+import { documentApi } from '../../api/documentApi'; // adjust path
 
-const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
+const CreateUserModal = ({ isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [documentPreviews, setDocumentPreviews] = useState({
-    pan: null,
-    aadhaar: null,
-    passport: null,
-    addressProof: null,
-    cancelledCheque: null,
-    agreement: null
-  });
 
-  const [formData, setFormData] = useState({
-    // Personal Details
-    fullName: '',
+  // ---- Form State ----
+  const [userData, setUserData] = useState({
     email: '',
     password: '',
+    fullName: '',
     phone: '',
     dateOfBirth: '',
-    gender: 'Male',
-    address: {
-      address: '',
-      city: '',
-      state: '',
-      pincode: ''
-    },
-    isSeniorCitizen: false,
-    
-    // Bank Details
-    bankDetails: {
-      accountHolderName: '',
-      bankName: '',
-      accountNumber: '',
-      ifscCode: '',
-      branch: '',
-      accountType: 'savings',
-      isVerified: false
-    },
-    
-    // Nominee Details
-    nominee: {
-      fullName: '',
-      relationship: '',
-      phone: '',
-      email: '',
-      address: '',
-      documentPath: ''
-    },
-    
-    // Documents
-    documents: {
-      pan: null,
-      aadhaar: null,
-      passport: null,
-      addressProof: null,
-      cancelledCheque: null,
-      agreement: null
-    },
-    
-    // Partner Settings
-    partnerType: 'none',
-    partnerCommissionRate: 0
+    pan: '',
+    aadhar: '',
+    address: '',
+    isSeniorCitizen: false
   });
+
+  const [nomineeData, setNomineeData] = useState({
+    fullName: '',
+    relation: '',
+    phone: '',
+    email: '',
+    address: '',
+    documentFile: null,   // file object for nominee document
+    documentPreview: null // for preview
+  });
+
+  const [bankData, setBankData] = useState({
+    accountHolderName: '',
+    bankName: '',
+    accountNumber: '',
+    ifscCode: '',
+    branch: '',
+    accountType: 'savings',
+    isVerified: false
+  });
+
+  const [documents, setDocuments] = useState({
+    panFile: null,
+    panPreview: null,
+    aadharFile: null,
+    aadharPreview: null
+  });
+
+  // ---- Step Configuration ----
+  const steps = [
+    { id: 1, label: 'Personal Details', icon: FiUser },
+    { id: 2, label: 'Nominee Details', icon: FiUserPlus },
+    { id: 3, label: 'Bank Details', icon: FiCreditCard },
+    { id: 4, label: 'Documents', icon: FiFileText },
+  ];
+  const totalSteps = steps.length;
 
   if (!isOpen) return null;
 
-  const steps = [
-    { id: 1, label: 'Personal Details', icon: FiUser },
-    { id: 2, label: 'Bank Details', icon: FiCreditCard },
-    { id: 3, label: 'Nominee Details', icon: FiUserPlus },
-    { id: 4, label: 'Documents', icon: FiFileText },
-  ];
-
-  const totalSteps = steps.length;
-
-  const handleChange = (e) => {
+  // ---- Handlers ----
+  const handleUserChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (name.includes('.')) {
-      const [section, field] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [section]: {
-          ...prev[section],
-          [field]: type === 'checkbox' ? checked : value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value
-      }));
-    }
-  };
-
-  const handleAddressChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
+    setUserData(prev => ({
       ...prev,
-      address: {
-        ...prev.address,
-        [name]: value
-      }
-    }));
-  };
-
-  const handleBankChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      bankDetails: {
-        ...prev.bankDetails,
-        [name]: type === 'checkbox' ? checked : value
-      }
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
   const handleNomineeChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setNomineeData(prev => ({
       ...prev,
-      nominee: {
-        ...prev.nominee,
-        [name]: value
-      }
+      [name]: value
+    }));
+  };
+
+  const handleBankChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setBankData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleNomineeFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    // Validate
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only JPEG, PNG, GIF, WEBP images and PDFs are allowed');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be less than 10MB');
+      return;
+    }
+    setNomineeData(prev => ({
+      ...prev,
+      documentFile: file,
+      documentPreview: file.type.startsWith('image/') ? URL.createObjectURL(file) : file.name
+    }));
+  };
+
+  const removeNomineeFile = () => {
+    setNomineeData(prev => ({
+      ...prev,
+      documentFile: null,
+      documentPreview: null
     }));
   };
 
   const handleDocumentUpload = (e, type) => {
     const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('Only JPEG, PNG, GIF, WEBP images and PDFs are allowed');
-        return;
-      }
-
-      // Validate file size (10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('File size must be less than 10MB');
-        return;
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        documents: {
-          ...prev.documents,
-          [type]: file
-        }
-      }));
-
-      // Create preview URL for images
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setDocumentPreviews(prev => ({
-            ...prev,
-            [type]: reader.result
-          }));
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setDocumentPreviews(prev => ({
-          ...prev,
-          [type]: file.name
-        }));
-      }
+    if (!file) return;
+    // Validate
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only JPEG, PNG, GIF, WEBP images and PDFs are allowed');
+      return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be less than 10MB');
+      return;
+    }
+    const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : file.name;
+    setDocuments(prev => ({
+      ...prev,
+      [type + 'File']: file,
+      [type + 'Preview']: preview
+    }));
   };
 
   const removeDocument = (type) => {
-    setFormData(prev => ({
+    setDocuments(prev => ({
       ...prev,
-      documents: {
-        ...prev.documents,
-        [type]: null
-      }
-    }));
-    setDocumentPreviews(prev => ({
-      ...prev,
-      [type]: null
+      [type + 'File']: null,
+      [type + 'Preview']: null
     }));
   };
 
+  // ---- Validation ----
   const validateStep = (step) => {
-    switch(step) {
+    switch (step) {
       case 1:
-        if (!formData.fullName || !formData.email || !formData.password) {
+        if (!userData.fullName || !userData.email || !userData.password) {
           toast.error('Please fill all required fields in Personal Details');
           return false;
         }
         return true;
       case 2:
-        if (!formData.bankDetails.accountHolderName || 
-            !formData.bankDetails.bankName || 
-            !formData.bankDetails.accountNumber || 
-            !formData.bankDetails.ifscCode) {
-          toast.error('Please fill all required fields in Bank Details');
+        // Nominee is optional? The backend may not require it, but we'll make it optional.
+        // If they want to add, they must fill required.
+        if (nomineeData.fullName && !nomineeData.relation) {
+          toast.error('Please fill Nominee Name and Relationship');
           return false;
         }
         return true;
       case 3:
-        if (!formData.nominee.fullName || !formData.nominee.relationship) {
-          toast.error('Please fill all required fields in Nominee Details');
+        if (!bankData.accountHolderName || !bankData.bankName || !bankData.accountNumber || !bankData.ifscCode) {
+          toast.error('Please fill all required fields in Bank Details');
           return false;
         }
         return true;
       case 4:
+        // Documents are optional
         return true;
       default:
         return true;
@@ -233,132 +191,115 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
+  // ---- Submit ----
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateStep(currentStep)) return;
-    
     setLoading(true);
-    try {
-      // Prepare data for API
-      const submitData = {
-        fullName: formData.fullName,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
-        dateOfBirth: formData.dateOfBirth,
-        gender: formData.gender,
-        address: formData.address,
-        isSeniorCitizen: formData.isSeniorCitizen,
-        bankDetails: formData.bankDetails,
-        nominee: formData.nominee,
-        partnerType: formData.partnerType,
-        partnerCommissionRate: formData.partnerCommissionRate,
-        // Documents would be uploaded separately
-        documents: Object.keys(formData.documents).reduce((acc, key) => {
-          if (formData.documents[key]) {
-            acc[key] = formData.documents[key].name;
-          }
-          return acc;
-        }, {})
-      };
 
-      await onSubmit(submitData);
-      
-      // Reset form
-      setFormData({
-        fullName: '',
-        email: '',
-        password: '',
-        phone: '',
-        dateOfBirth: '',
-        gender: 'Male',
-        address: { address: '', city: '', state: '', pincode: '' },
-        isSeniorCitizen: false,
-        bankDetails: {
-          accountHolderName: '',
-          bankName: '',
-          accountNumber: '',
-          ifscCode: '',
-          branch: '',
-          accountType: 'savings',
-          isVerified: false
-        },
-        nominee: {
-          fullName: '',
-          relationship: '',
-          phone: '',
-          email: '',
-          address: '',
-          documentPath: ''
-        },
-        documents: {
-          pan: null,
-          aadhaar: null,
-          passport: null,
-          addressProof: null,
-          cancelledCheque: null,
-          agreement: null
-        },
-        partnerType: 'none',
-        partnerCommissionRate: 0
-      });
-      setDocumentPreviews({
-        pan: null,
-        aadhaar: null,
-        passport: null,
-        addressProof: null,
-        cancelledCheque: null,
-        agreement: null
-      });
-      setCurrentStep(1);
+    try {
+      // 1. Create User
+      const userPayload = {
+        email: userData.email,
+        password: userData.password,
+        fullName: userData.fullName,
+        phone: userData.phone || undefined,
+        dateOfBirth: userData.dateOfBirth || undefined,
+        pan: userData.pan || undefined,
+        aadhar: userData.aadhar || undefined,
+        address: userData.address || undefined,
+        isSeniorCitizen: userData.isSeniorCitizen
+      };
+      const userResponse = await authApi.createUser(userPayload);
+      if (!userResponse.success) throw new Error(userResponse.message);
+      const userId = userResponse.data.id;
+      toast.success('User created successfully!');
+
+      // 2. Create Nominee (if nominee name provided)
+      if (nomineeData.fullName) {
+        let nomineeDocPath = '';
+        // Upload nominee document if exists
+        if (nomineeData.documentFile) {
+
+          const uploadRes = await filesAPI.uploadSingle(nomineeData.documentFile);
+
+          console.log(uploadRes.data);
+
+          if (uploadRes.data.success) {
+            nomineeDocPath = uploadRes.data.data.filePath;
+          } else {
+            toast.error("Nominee document upload failed, continuing without it");
+          }
+
+        }
+        console.log("nomineeDocPath:", nomineeDocPath);
+        const nomineePayload = {
+          userId,
+          fullName: nomineeData.fullName,
+          relation: nomineeData.relation,
+          phone: nomineeData.phone || undefined,
+          email: nomineeData.email || undefined,
+          address: nomineeData.address || undefined,
+          documentPath: nomineeDocPath || undefined
+        };
+        await nomineeApi.create(nomineePayload);
+        toast.success('Nominee added!');
+      }
+
+      // 3. Create/Update Bank Details
+      if (bankData.accountHolderName) {
+        const bankPayload = {
+          userId,
+          accountHolderName: bankData.accountHolderName,
+          bankName: bankData.bankName,
+          accountNumber: bankData.accountNumber,
+          ifscCode: bankData.ifscCode,
+          branch: bankData.branch || undefined,
+          accountType: bankData.accountType,
+          isVerified: bankData.isVerified
+        };
+        await authApi.upsertBankDetails(bankPayload);
+        toast.success('Bank details saved!');
+      }
+
+      // 4. Upload KYC Documents (PAN & Aadhar)
+      const docTypes = [
+        { key: 'pan', title: 'PAN Card' },
+        { key: 'aadhar', title: 'Aadhar Card' }
+      ];
+      for (const doc of docTypes) {
+        const file = documents[doc.key + 'File'];
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('userId', userId);
+          formData.append('type', 'kyc');
+          formData.append('title', doc.title);
+          await documentApi.upload(formData);
+          toast.success(`${doc.title} uploaded!`);
+        }
+      }
+
+      // Reset form and close
       onClose();
+      // Reset state (optional)
+      setUserData({
+        email: '', password: '', fullName: '', phone: '', dateOfBirth: '', pan: '', aadhar: '', address: '', isSeniorCitizen: false
+      });
+      setNomineeData({ fullName: '', relation: '', phone: '', email: '', address: '', documentFile: null, documentPreview: null });
+      setBankData({ accountHolderName: '', bankName: '', accountNumber: '', ifscCode: '', branch: '', accountType: 'savings', isVerified: false });
+      setDocuments({ panFile: null, panPreview: null, aadharFile: null, aadharPreview: null });
+      setCurrentStep(1);
+      toast.success('User fully created!');
     } catch (error) {
-      // Error handled in parent
+      console.error('Create user error:', error);
+      toast.error(error.message || 'Failed to create user');
     } finally {
       setLoading(false);
     }
   };
 
-  const renderStepIndicator = () => (
-    <div className="px-6 pt-6">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => {
-          const isActive = currentStep === step.id;
-          const isCompleted = currentStep > step.id;
-          
-          return (
-            <React.Fragment key={step.id}>
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                    isActive 
-                      ? 'bg-blue-600 text-white ring-4 ring-blue-200 shadow-lg shadow-blue-500/30' 
-                      : isCompleted 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-gray-200 text-gray-500'
-                  }`}
-                >
-                  {isCompleted ? <FiCheck className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
-                </div>
-                <span className={`text-xs mt-1.5 font-medium ${
-                  isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-400'
-                }`}>
-                  {step.label}
-                </span>
-              </div>
-              {index < steps.length - 1 && (
-                <div className={`flex-1 h-0.5 ${
-                  currentStep > step.id ? 'bg-green-500' : 'bg-gray-200'
-                }`} />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  // Step 1: Personal Details
+  // ---- Render Steps ----
   const renderPersonalDetails = () => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -367,23 +308,23 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
           <input
             type="text"
             name="fullName"
-            value={formData.fullName}
-            onChange={handleChange}
+            value={userData.fullName}
+            onChange={handleUserChange}
             className="form-input"
             required
             placeholder="Enter full name"
           />
         </div>
         <div>
-          <label className="form-label">Email Address <span className="text-red-500">*</span></label>
+          <label className="form-label">Email <span className="text-red-500">*</span></label>
           <input
             type="email"
             name="email"
-            value={formData.email}
-            onChange={handleChange}
+            value={userData.email}
+            onChange={handleUserChange}
             className="form-input"
             required
-            placeholder="Enter email address"
+            placeholder="Enter email"
           />
         </div>
         <div>
@@ -391,24 +332,24 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
           <input
             type="password"
             name="password"
-            value={formData.password}
-            onChange={handleChange}
+            value={userData.password}
+            onChange={handleUserChange}
             className="form-input"
             required
             minLength={6}
-            placeholder="Minimum 6 characters"
+            placeholder="Min 6 characters"
           />
         </div>
         <div>
-          <label className="form-label">Phone Number</label>
+          <label className="form-label">Phone</label>
           <input
             type="tel"
             name="phone"
-            value={formData.phone}
-            onChange={handleChange}
+            value={userData.phone}
+            onChange={handleUserChange}
             className="form-input"
             pattern="[0-9]{10}"
-            placeholder="10 digit mobile number"
+            placeholder="10 digit number"
           />
         </div>
         <div>
@@ -416,90 +357,160 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
           <input
             type="date"
             name="dateOfBirth"
-            value={formData.dateOfBirth}
-            onChange={handleChange}
+            value={userData.dateOfBirth}
+            onChange={handleUserChange}
             className="form-input"
           />
         </div>
         <div>
-          <label className="form-label">Gender</label>
-          <select
-            name="gender"
-            value={formData.gender}
-            onChange={handleChange}
+          <label className="form-label">PAN</label>
+          <input
+            type="text"
+            name="pan"
+            value={userData.pan}
+            onChange={handleUserChange}
+            className="form-input uppercase"
+            placeholder="ABCDE1234F"
+          />
+        </div>
+        <div>
+          <label className="form-label">Aadhar</label>
+          <input
+            type="text"
+            name="aadhar"
+            value={userData.aadhar}
+            onChange={handleUserChange}
             className="form-input"
-          >
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
+            placeholder="12 digit Aadhar"
+          />
+        </div>
+        <div className="flex items-center gap-2 pt-2">
+          <input
+            type="checkbox"
+            id="isSeniorCitizen"
+            name="isSeniorCitizen"
+            checked={userData.isSeniorCitizen}
+            onChange={handleUserChange}
+            className="w-4 h-4 text-blue-600 rounded border-gray-300"
+          />
+          <label htmlFor="isSeniorCitizen" className="text-sm text-gray-700">Senior Citizen</label>
         </div>
       </div>
-
       <div>
         <label className="form-label">Address</label>
-        <input
-          type="text"
+        <textarea
           name="address"
-          value={formData.address.address}
-          onChange={handleAddressChange}
+          value={userData.address}
+          onChange={handleUserChange}
           className="form-input"
-          placeholder="Street address"
+          rows="2"
+          placeholder="Full address"
         />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="form-label">City</label>
-          <input
-            type="text"
-            name="city"
-            value={formData.address.city}
-            onChange={handleAddressChange}
-            className="form-input"
-            placeholder="City"
-          />
-        </div>
-        <div>
-          <label className="form-label">State</label>
-          <input
-            type="text"
-            name="state"
-            value={formData.address.state}
-            onChange={handleAddressChange}
-            className="form-input"
-            placeholder="State"
-          />
-        </div>
-        <div>
-          <label className="form-label">Pincode</label>
-          <input
-            type="text"
-            name="pincode"
-            value={formData.address.pincode}
-            onChange={handleAddressChange}
-            className="form-input"
-            placeholder="Pincode"
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 pt-2">
-        <input
-          type="checkbox"
-          id="isSeniorCitizen"
-          name="isSeniorCitizen"
-          checked={formData.isSeniorCitizen}
-          onChange={handleChange}
-          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-        />
-        <label htmlFor="isSeniorCitizen" className="text-sm text-gray-700">
-          Senior Citizen
-        </label>
       </div>
     </div>
   );
 
-  // Step 2: Bank Details
+  const renderNomineeDetails = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="form-label">Nominee Full Name</label>
+          <input
+            type="text"
+            name="fullName"
+            value={nomineeData.fullName}
+            onChange={handleNomineeChange}
+            className="form-input"
+            placeholder="Enter nominee name"
+          />
+        </div>
+        <div>
+          <label className="form-label">Relationship</label>
+          <input
+            type="text"
+            name="relation"
+            value={nomineeData.relation}
+            onChange={handleNomineeChange}
+            className="form-input"
+            placeholder="e.g., Spouse, Son"
+          />
+        </div>
+        <div>
+          <label className="form-label">Phone</label>
+          <input
+            type="tel"
+            name="phone"
+            value={nomineeData.phone}
+            onChange={handleNomineeChange}
+            className="form-input"
+            placeholder="10 digit number"
+          />
+        </div>
+        <div>
+          <label className="form-label">Email</label>
+          <input
+            type="email"
+            name="email"
+            value={nomineeData.email}
+            onChange={handleNomineeChange}
+            className="form-input"
+            placeholder="Email address"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="form-label">Address</label>
+        <textarea
+          name="address"
+          value={nomineeData.address}
+          onChange={handleNomineeChange}
+          className="form-input"
+          rows="2"
+          placeholder="Nominee address"
+        />
+      </div>
+      <div>
+        <label className="form-label">Nominee Document</label>
+        {nomineeData.documentFile ? (
+          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+            {nomineeData.documentPreview?.startsWith('data:image') || nomineeData.documentPreview?.startsWith('blob:') ? (
+              <img src={nomineeData.documentPreview} alt="Nominee doc" className="h-16 w-16 object-cover rounded-lg" />
+            ) : nomineeData.documentPreview ? (
+              <div className="flex items-center gap-2">
+                <FiFile className="text-gray-500 w-5 h-5" />
+                <span className="text-sm truncate">{nomineeData.documentFile.name}</span>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={removeNomineeFile}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+            >
+              <FiTrash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <input
+              type="file"
+              id="nominee-doc"
+              onChange={handleNomineeFileUpload}
+              className="hidden"
+              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/*,application/pdf"
+            />
+            <label
+              htmlFor="nominee-doc"
+              className="flex flex-col items-center justify-center gap-1 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all"
+            >
+              <FiUpload className="text-gray-400 w-5 h-5" />
+              <span className="text-xs text-gray-500">Click to upload nominee document</span>
+            </label>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderBankDetails = () => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -508,7 +519,7 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
           <input
             type="text"
             name="accountHolderName"
-            value={formData.bankDetails.accountHolderName}
+            value={bankData.accountHolderName}
             onChange={handleBankChange}
             className="form-input"
             required
@@ -520,7 +531,7 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
           <input
             type="text"
             name="bankName"
-            value={formData.bankDetails.bankName}
+            value={bankData.bankName}
             onChange={handleBankChange}
             className="form-input"
             required
@@ -532,12 +543,11 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
           <input
             type="text"
             name="accountNumber"
-            value={formData.bankDetails.accountNumber}
+            value={bankData.accountNumber}
             onChange={handleBankChange}
             className="form-input"
             required
             placeholder="Enter account number"
-            pattern="[0-9]{9,18}"
           />
         </div>
         <div>
@@ -545,30 +555,29 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
           <input
             type="text"
             name="ifscCode"
-            value={formData.bankDetails.ifscCode}
+            value={bankData.ifscCode}
             onChange={handleBankChange}
             className="form-input uppercase"
             required
             placeholder="e.g., SBIN0001234"
-            pattern="[A-Z]{4}0[A-Z0-9]{6}"
           />
         </div>
         <div>
-          <label className="form-label">Branch Name</label>
+          <label className="form-label">Branch</label>
           <input
             type="text"
             name="branch"
-            value={formData.bankDetails.branch}
+            value={bankData.branch}
             onChange={handleBankChange}
             className="form-input"
-            placeholder="Enter branch name"
+            placeholder="Branch name"
           />
         </div>
         <div>
           <label className="form-label">Account Type</label>
           <select
             name="accountType"
-            value={formData.bankDetails.accountType}
+            value={bankData.accountType}
             onChange={handleBankChange}
             className="form-input"
           >
@@ -583,182 +592,119 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
           type="checkbox"
           id="bankVerified"
           name="isVerified"
-          checked={formData.bankDetails.isVerified}
+          checked={bankData.isVerified}
           onChange={handleBankChange}
-          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          className="w-4 h-4 text-blue-600 rounded border-gray-300"
         />
-        <label htmlFor="bankVerified" className="text-sm text-gray-700">
-          Mark as Verified
-        </label>
+        <label htmlFor="bankVerified" className="text-sm text-gray-700">Mark as Verified</label>
       </div>
     </div>
   );
 
-  // Step 3: Nominee Details
-  const renderNomineeDetails = () => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="form-label">Nominee Full Name <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            name="fullName"
-            value={formData.nominee.fullName}
-            onChange={handleNomineeChange}
-            className="form-input"
-            required
-            placeholder="Enter nominee name"
-          />
-        </div>
-        <div>
-          <label className="form-label">Relationship <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            name="relationship"
-            value={formData.nominee.relationship}
-            onChange={handleNomineeChange}
-            className="form-input"
-            required
-            placeholder="e.g., Spouse, Son, Daughter, Parent"
-          />
-        </div>
-        <div>
-          <label className="form-label">Phone Number</label>
-          <input
-            type="tel"
-            name="phone"
-            value={formData.nominee.phone}
-            onChange={handleNomineeChange}
-            className="form-input"
-            placeholder="10 digit mobile number"
-            pattern="[0-9]{10}"
-          />
-        </div>
-        <div>
-          <label className="form-label">Email Address</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.nominee.email}
-            onChange={handleNomineeChange}
-            className="form-input"
-            placeholder="Enter email address"
-          />
-        </div>
-      </div>
-      <div>
-        <label className="form-label">Address</label>
-        <textarea
-          name="address"
-          value={formData.nominee.address}
-          onChange={handleNomineeChange}
-          className="form-input"
-          rows="2"
-          placeholder="Enter nominee address"
-        />
-      </div>
-      <div>
-        <label className="form-label">Document Path</label>
-        <input
-          type="text"
-          name="documentPath"
-          value={formData.nominee.documentPath}
-          onChange={handleNomineeChange}
-          className="form-input"
-          placeholder="Path to nominee identity document"
-        />
-      </div>
-    </div>
-  );
-
-  // Step 4: Documents
   const renderDocuments = () => {
-    const documentFields = [
+    const docFields = [
       { key: 'pan', label: 'PAN Card' },
-      { key: 'aadhaar', label: 'Aadhaar Card' },
-      { key: 'passport', label: 'Passport Photo' },
-      { key: 'addressProof', label: 'Address Proof' },
-      { key: 'cancelledCheque', label: 'Cancelled Cheque / Passbook' },
-      { key: 'agreement', label: 'Agreement Document' }
+      { key: 'aadhar', label: 'Aadhar Card' }
     ];
-
     return (
       <div className="space-y-4">
-        <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-200/50 mb-4">
+        <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-200/50">
           <p className="text-sm text-blue-600 flex items-center gap-2">
             <FiFileText className="w-4 h-4" />
-            Upload KYC and supporting documents (Max 10MB each)
+            Upload KYC documents (Max 10MB each)
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {documentFields.map(({ key, label }) => (
-            <div key={key} className="border border-gray-200 rounded-xl p-4 hover:border-blue-300 transition-colors">
-              <label className="form-label text-sm">{label}</label>
-              <div className="mt-2">
-                {formData.documents[key] ? (
-                  <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      {documentPreviews[key]?.startsWith('data:image') ? (
-                        <img 
-                          src={documentPreviews[key]} 
-                          alt={label} 
-                          className="h-16 w-16 object-cover rounded-lg"
-                        />
-                      ) : documentPreviews[key] ? (
-                        <div className="flex items-center gap-2">
-                          {formData.documents[key].type?.startsWith('image/') ? (
-                            <FiImage className="text-blue-500 w-5 h-5" />
-                          ) : (
-                            <FiFile className="text-gray-500 w-5 h-5" />
-                          )}
-                          <span className="text-sm truncate max-w-[120px]">{formData.documents[key].name}</span>
-                        </div>
-                      ) : null}
+        {docFields.map(({ key, label }) => (
+          <div key={key} className="border border-gray-200 rounded-xl p-4">
+            <label className="form-label text-sm">{label}</label>
+            <div className="mt-2">
+              {documents[key + 'File'] ? (
+                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                  {documents[key + 'Preview']?.startsWith('data:image') || documents[key + 'Preview']?.startsWith('blob:') ? (
+                    <img src={documents[key + 'Preview']} alt={label} className="h-16 w-16 object-cover rounded-lg" />
+                  ) : documents[key + 'Preview'] ? (
+                    <div className="flex items-center gap-2">
+                      <FiFile className="text-gray-500 w-5 h-5" />
+                      <span className="text-sm truncate">{documents[key + 'File'].name}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeDocument(key)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <FiTrash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <input
-                      type="file"
-                      id={`file-${key}`}
-                      onChange={(e) => handleDocumentUpload(e, key)}
-                      className="hidden"
-                      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/*,application/pdf"
-                    />
-                    <label
-                      htmlFor={`file-${key}`}
-                      className="flex flex-col items-center justify-center gap-1 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all"
-                    >
-                      <FiUpload className="text-gray-400 w-5 h-5" />
-                      <span className="text-xs text-gray-500">Click to upload</span>
-                      <span className="text-[10px] text-gray-400">JPEG, PNG, PDF (Max 10MB)</span>
-                    </label>
-                  </div>
-                )}
-              </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => removeDocument(key)}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+                  >
+                    <FiTrash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="file"
+                    id={`doc-${key}`}
+                    onChange={(e) => handleDocumentUpload(e, key)}
+                    className="hidden"
+                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/*,application/pdf"
+                  />
+                  <label
+                    htmlFor={`doc-${key}`}
+                    className="flex flex-col items-center justify-center gap-1 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all"
+                  >
+                    <FiUpload className="text-gray-400 w-5 h-5" />
+                    <span className="text-xs text-gray-500">Click to upload</span>
+                  </label>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     );
   };
 
-  const renderTabContent = () => {
-    switch(currentStep) {
+  const renderStepContent = () => {
+    switch (currentStep) {
       case 1: return renderPersonalDetails();
-      case 2: return renderBankDetails();
-      case 3: return renderNomineeDetails();
+      case 2: return renderNomineeDetails();
+      case 3: return renderBankDetails();
       case 4: return renderDocuments();
       default: return null;
     }
   };
+
+  const renderStepIndicator = () => (
+    <div className="px-6 pt-6">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => {
+          const isActive = currentStep === step.id;
+          const isCompleted = currentStep > step.id;
+          return (
+            <React.Fragment key={step.id}>
+              <div className="flex flex-col items-center">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isActive
+                    ? 'bg-blue-600 text-white ring-4 ring-blue-200 shadow-lg shadow-blue-500/30'
+                    : isCompleted
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-500'
+                    }`}
+                >
+                  {isCompleted ? <FiCheck className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
+                </div>
+                <span className={`text-xs mt-1.5 font-medium ${isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-400'
+                  }`}>
+                  {step.label}
+                </span>
+              </div>
+              {index < steps.length - 1 && (
+                <div className={`flex-1 h-0.5 ${currentStep > step.id ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -780,9 +726,8 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
 
         {renderStepIndicator()}
 
-        <form onSubmit={handleSubmit}>
           <div className="p-6">
-            {renderTabContent()}
+            {renderStepContent()}
           </div>
 
           <div className="px-6 py-4 border-t border-gray-200 flex gap-3 bg-gray-50/50 rounded-b-2xl">
@@ -791,6 +736,7 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
                 type="button"
                 onClick={prevStep}
                 className="flex-1 btn-secondary flex items-center justify-center gap-2"
+                disabled={loading}
               >
                 <FiArrowLeft className="w-4 h-4" />
                 Previous
@@ -800,23 +746,26 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
                 type="button"
                 onClick={onClose}
                 className="flex-1 btn-secondary"
+                disabled={loading}
               >
                 Cancel
               </button>
             )}
-            
+
             {currentStep < totalSteps ? (
               <button
                 type="button"
                 onClick={nextStep}
                 className="flex-1 btn-primary flex items-center justify-center gap-2"
+                disabled={loading}
               >
                 Next
                 <FiArrowRight className="w-4 h-4" />
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit}
                 disabled={loading}
                 className="flex-1 btn-primary flex items-center justify-center gap-2"
               >
@@ -833,7 +782,6 @@ const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
               </button>
             )}
           </div>
-        </form>
       </div>
     </div>
   );

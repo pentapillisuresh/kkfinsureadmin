@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../../api/adminApi';
 import { authApi } from '../../api/authApi';
-import { 
-  FiPlus, FiSearch, FiFilter, FiDownload, FiEye, 
+import {
+  FiPlus, FiSearch, FiFilter, FiDownload, FiEye,
   FiEdit, FiTrash2, FiToggleLeft, FiToggleRight,
   FiChevronLeft, FiChevronRight, FiUser, FiUsers,
   FiMail, FiPhone, FiAward, FiCheckCircle, FiXCircle,
@@ -30,6 +30,11 @@ const UsersList = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedNominee, setSelectedNominee] = useState(null);
+  const [selectedBank, setSelectedBank] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
   useEffect(() => {
     fetchUsers();
   }, [currentPage, searchTerm, filterRole, filterStatus, filterPartnerType]);
@@ -41,14 +46,14 @@ const UsersList = () => {
         page: currentPage,
         limit: itemsPerPage,
       };
-      
+
       if (searchTerm) params.search = searchTerm;
       if (filterRole !== 'all') params.role = filterRole;
       if (filterPartnerType !== 'all') params.partnerType = filterPartnerType;
       if (filterStatus !== 'all') params.isActive = filterStatus === 'active';
 
       const response = await adminApi.getUsers(params);
-      
+
       if (response.success) {
         setUsers(response.data.users || []);
         setPagination(response.data.pagination || { total: 0, totalPages: 0 });
@@ -94,28 +99,55 @@ const UsersList = () => {
     }
   };
 
-  const handleEditUser = async (userData) => {
+  const handleEditUser = async (updatedData) => {
+    setEditLoading(true);
     try {
-      const response = await adminApi.updateUser(selectedUser.id, userData);
-      if (response.success) {
-        toast.success('User updated successfully');
-        setShowEditModal(false);
-        setSelectedUser(null);
-        fetchUsers();
-      } else {
-        toast.error(response.message || 'Failed to update user');
-      }
+      // Call your API to update user, nominee, bank, and documents
+      // You can make multiple calls or one combined endpoint
+      // For example:
+      // 1. Update user: adminApi.updateUser(userId, updatedData.user)
+      // 2. Update nominee: nomineeApi.updateNominee(nomineeId, updatedData.nominee)
+      // 3. Update bank: bankApi.updateBank(bankId, updatedData.bank)
+      // 4. Update documents: documentApi.updateDoc(panDocId, { filePath: updatedData.documents.panPath }) etc.
+
+      // For simplicity, we'll call a single onSubmit from parent
+      await onSubmit(updatedData);
+      toast.success('User updated successfully');
+      fetchUsers(); // refresh list
+      setEditModalOpen(false);
     } catch (error) {
-      console.error('Error updating user:', error);
-      toast.error(error.response?.data?.message || 'Failed to update user');
+      toast.error(error.message || 'Update failed');
+    } finally {
+      setEditLoading(false);
     }
   };
 
   const openEditModal = (user) => {
+    console.log("userData::", user);
+  
     setSelectedUser(user);
+  
+    // Nominee
+    setSelectedNominee(user.nominee || null);
+  
+    // Bank Details
+    setSelectedBank(user.bankDetail || null);
+  
+    // Documents
+    const panDocument =
+      user.documents?.find((doc) => doc.title === "PAN Card") || null;
+  
+    const aadharDocument =
+      user.documents?.find((doc) => doc.title === "Aadhar Card") || null;
+  
+    setSelectedDocument({
+      pan: panDocument,
+      aadhar: aadharDocument,
+    });
+  
     setShowEditModal(true);
   };
-
+  
   const handleDelete = (id, name) => {
     if (window.confirm(`Are you sure you want to delete user: ${name}? This action cannot be undone.`)) {
       toast.error('Delete functionality coming soon');
@@ -248,22 +280,20 @@ const UsersList = () => {
             <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-2 rounded-lg transition-all ${
-                  viewMode === 'table' 
-                    ? 'bg-white shadow-sm text-blue-600' 
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
+                className={`p-2 rounded-lg transition-all ${viewMode === 'table'
+                  ? 'bg-white shadow-sm text-blue-600'
+                  : 'text-gray-400 hover:text-gray-600'
+                  }`}
                 title="Table View"
               >
                 <FiList className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all ${
-                  viewMode === 'grid' 
-                    ? 'bg-white shadow-sm text-blue-600' 
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
+                className={`p-2 rounded-lg transition-all ${viewMode === 'grid'
+                  ? 'bg-white shadow-sm text-blue-600'
+                  : 'text-gray-400 hover:text-gray-600'
+                  }`}
                 title="Grid View"
               >
                 <FiGrid className="w-4 h-4" />
@@ -336,30 +366,27 @@ const UsersList = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                          user.role === 'admin' 
-                            ? 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700' 
-                            : 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700'
-                        }`}>
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${user.role === 'admin'
+                          ? 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700'
+                          : 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700'
+                          }`}>
                           {user.role}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                          user.partnerType === 'none' ? 'bg-gray-100 text-gray-600' :
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${user.partnerType === 'none' ? 'bg-gray-100 text-gray-600' :
                           user.partnerType === 'referral' ? 'bg-green-100 text-green-700' :
-                          user.partnerType === 'authorised' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-purple-100 text-purple-700'
-                        }`}>
+                            user.partnerType === 'authorised' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-purple-100 text-purple-700'
+                          }`}>
                           {user.partnerType || 'None'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                          user.isActive 
-                            ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-700' 
-                            : 'bg-gradient-to-r from-red-100 to-red-200 text-red-700'
-                        }`}>
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${user.isActive
+                          ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-700'
+                          : 'bg-gradient-to-r from-red-100 to-red-200 text-red-700'
+                          }`}>
                           {user.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -381,11 +408,10 @@ const UsersList = () => {
                           </button>
                           <button
                             onClick={() => handleToggleStatus(user.id)}
-                            className={`p-2 rounded-lg transition-all group-hover:scale-105 ${
-                              user.isActive
-                                ? 'text-green-600 hover:bg-green-50'
-                                : 'text-gray-400 hover:bg-gray-100'
-                            }`}
+                            className={`p-2 rounded-lg transition-all group-hover:scale-105 ${user.isActive
+                              ? 'text-green-600 hover:bg-green-50'
+                              : 'text-gray-400 hover:bg-gray-100'
+                              }`}
                             title={user.isActive ? 'Deactivate' : 'Activate'}
                           >
                             {user.isActive ? <FiToggleRight className="w-4 h-4" /> : <FiToggleLeft className="w-4 h-4" />}
@@ -430,15 +456,14 @@ const UsersList = () => {
                         <div className="text-xs text-gray-500">{user.batchId || 'N/A'}</div>
                       </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.isActive 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-red-100 text-red-700'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.isActive
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
+                      }`}>
                       {user.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  
+
                   <div className="mt-3 space-y-1.5">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <FiMail className="text-gray-400 text-xs" />
@@ -449,22 +474,20 @@ const UsersList = () => {
                       <span>{user.phone || 'N/A'}</span>
                     </div>
                   </div>
-                  
+
                   <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                     <div className="flex gap-1.5">
-                      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                        user.role === 'admin' 
-                          ? 'bg-purple-100 text-purple-700' 
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
+                      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${user.role === 'admin'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-blue-100 text-blue-700'
+                        }`}>
                         {user.role}
                       </span>
-                      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                        user.partnerType === 'none' ? 'bg-gray-100 text-gray-600' :
+                      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${user.partnerType === 'none' ? 'bg-gray-100 text-gray-600' :
                         user.partnerType === 'referral' ? 'bg-green-100 text-green-700' :
-                        user.partnerType === 'authorised' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-purple-100 text-purple-700'
-                      }`}>
+                          user.partnerType === 'authorised' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-purple-100 text-purple-700'
+                        }`}>
                         {user.partnerType || 'None'}
                       </span>
                     </div>
@@ -485,11 +508,10 @@ const UsersList = () => {
                       </button>
                       <button
                         onClick={() => handleToggleStatus(user.id)}
-                        className={`p-1.5 rounded-lg transition-all ${
-                          user.isActive
-                            ? 'text-green-600 hover:bg-green-50'
-                            : 'text-gray-400 hover:bg-gray-100'
-                        }`}
+                        className={`p-1.5 rounded-lg transition-all ${user.isActive
+                          ? 'text-green-600 hover:bg-green-50'
+                          : 'text-gray-400 hover:bg-gray-100'
+                          }`}
                         title={user.isActive ? 'Deactivate' : 'Activate'}
                       >
                         {user.isActive ? <FiToggleRight className="w-3.5 h-3.5" /> : <FiToggleLeft className="w-3.5 h-3.5" />}
@@ -539,13 +561,13 @@ const UsersList = () => {
       />
 
       <EditUserModal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedUser(null);
-        }}
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
         onSubmit={handleEditUser}
         user={selectedUser}
+        nominee={selectedNominee}
+        bank={selectedBank}
+        isLoading={editLoading}
       />
     </div>
   );

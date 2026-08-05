@@ -6,7 +6,7 @@ const CreateInvestmentModal = ({ isOpen, onClose, onSubmit, plans }) => {
   const [formData, setFormData] = useState({
     userId: '',
     planId: '',
-    amount: '',
+    amount: 0,
     investmentDate: '',
   });
   const [users, setUsers] = useState([]);
@@ -38,16 +38,24 @@ const CreateInvestmentModal = ({ isOpen, onClose, onSubmit, plans }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+  
     try {
-      await onSubmit(formData);
-      setFormData({ userId: '', planId: '', amount: '', investmentDate: '' });
+      await onSubmit({
+        ...formData,
+        amount: parseInt(formData.amount, 10),
+      });
     } catch (error) {
       // Error handled in parent
     } finally {
+      setFormData({
+        userId: '',
+        planId: '',
+        amount: 0,
+        investmentDate: '',
+      });
       setLoading(false);
     }
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">

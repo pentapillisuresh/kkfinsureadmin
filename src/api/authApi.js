@@ -16,4 +16,8 @@ export const authApi = {
     const response = await apiClient.post('/auth/admin/create-user', userData);
     return response.data;
   },
+  upsertBankDetails: async (userNomineeData) => {
+    const response = await apiClient.put(`/bank-details/user/${userNomineeData.userId}`, userNomineeData);
+    return response.data;
+  },
 };

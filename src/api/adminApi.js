@@ -3,6 +3,12 @@ import apiClient from './apiClient';
 
 export const adminApi = {
   // Users
+  getDashboard: async () => {
+    const response = await apiClient.get('/admin/dashboard');
+    return response.data;
+  },
+  
+  // Users
   getUsers: async (params) => {
     const response = await apiClient.get('/admin/users', { params });
     return response.data;

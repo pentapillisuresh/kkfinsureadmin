@@ -2,35 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
 import StatsCard from '../components/common/StatsCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import {
-  FaUsers,
-  FaWallet,
-  FaMoneyBillWave,
-  FaTicketAlt,
-  FaUserPlus,
-  FaChartLine,
-} from 'react-icons/fa';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
+import { FaUsers, FaWallet, FaMoneyBillWave, FaTicketAlt } from 'react-icons/fa';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recentUsers, setRecentUsers] = useState([]);
+  const [monthlyData, setMonthlyData] = useState([]);
+  const [pieData, setPieData] = useState([]);
+  const [totalReturns, setTotalReturns] = useState(0);
+
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b'];
 
   useEffect(() => {
     fetchDashboardData();
@@ -38,19 +22,44 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, usersRes] = await Promise.all([
-        adminApi.getDashboardStats(),
-        adminApi.getUsers({ page: 1, limit: 5 }),
-      ]);
-
-      if (statsRes.success) {
-        setStats(statsRes.data);
-      }
-
-      if (usersRes.success) {
-        setRecentUsers(usersRes.data.users || []);
+      setLoading(true);
+      const response = await adminApi.getDashboard();
+      
+      if (response.success) {
+        const { stats, monthlyActivity, investmentOverview, recentUsers } = response.data;
+        
+        setStats({
+          totalUsers: stats.totalUsers,
+          newUsersThisMonth: stats.newUsersThisMonth,
+          activeInvestments: stats.activeInvestments,
+          returnsThisMonth: stats.totalReturnsThisMonth,
+          pendingTickets: stats.pendingTickets,
+          totalReturnsOverall: stats.totalReturnsOverall,
+        });
+        
+        setTotalReturns(stats.totalReturnsOverall);
+        
+        // Transform monthlyActivity for bar chart
+        const chartData = monthlyActivity.map(item => ({
+          month: item.month,
+          users: item.newUsers,
+          investments: item.newInvestments,
+        }));
+        setMonthlyData(chartData);
+        
+        // Transform investmentOverview for pie chart
+        const pieChartData = investmentOverview.map(item => ({
+          name: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+          value: item.count,
+        }));
+        setPieData(pieChartData);
+        
+        setRecentUsers(recentUsers || []);
+      } else {
+        toast.error(response.message || 'Failed to load dashboard data');
       }
     } catch (error) {
+      console.error('Dashboard fetch error:', error);
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -78,40 +87,23 @@ const Dashboard = () => {
       value: stats?.activeInvestments || 0,
       icon: FaWallet,
       color: 'bg-green-500',
-      change: `₹${(stats?.totalInvestmentAmount || 0).toLocaleString()}`,
+      change: `${pieData.find(d => d.name === 'Active')?.value || 0} active`,
     },
     {
       title: 'Total Returns',
       value: `₹${(stats?.returnsThisMonth || 0).toLocaleString()}`,
       icon: FaMoneyBillWave,
       color: 'bg-purple-500',
-      change: 'This month',
+      change: `₹${(stats?.totalReturnsOverall || 0).toLocaleString()} overall`,
     },
     {
       title: 'Pending Tickets',
       value: stats?.pendingTickets || 0,
       icon: FaTicketAlt,
       color: 'bg-orange-500',
-      change: 'Need attention',
+      change: stats?.pendingTickets > 0 ? 'Need attention' : 'All resolved',
     },
   ];
-
-  // Sample chart data - in production, fetch from API
-  const monthlyData = [
-    { month: 'Jan', users: 30, investments: 45 },
-    { month: 'Feb', users: 45, investments: 52 },
-    { month: 'Mar', users: 52, investments: 60 },
-    { month: 'Apr', users: 58, investments: 68 },
-    { month: 'May', users: 70, investments: 75 },
-    { month: 'Jun', users: 82, investments: 90 },
-  ];
-
-  const pieData = [
-    { name: 'Active', value: stats?.activeInvestments || 0 },
-    { name: 'Matured', value: stats?.totalUsers || 0 },
-  ];
-
-  const COLORS = ['#3b82f6', '#10b981'];
 
   return (
     <div className="space-y-6">
@@ -133,7 +125,7 @@ const Dashboard = () => {
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="users" fill="#3b82f6" name="New Users" />
-                <Bar dataKey="investments" fill="#10b981" name="Investments" />
+                <Bar dataKey="investments" fill="#10b981" name="New Investments" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -203,7 +195,7 @@ const Dashboard = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-sm">
-                      {new Date(user.createdAt).toLocaleDateString()}
+                      {new Date(user.joined).toLocaleDateString()}
                     </td>
                   </tr>
                 ))
