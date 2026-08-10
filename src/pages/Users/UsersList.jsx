@@ -399,13 +399,13 @@ const UsersList = () => {
                           >
                             <FiEye className="w-4 h-4" />
                           </Link>
-                          <button
+                          {/* <button
                             onClick={() => openEditModal(user)}
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all group-hover:scale-105"
                             title="Edit"
                           >
                             <FiEdit className="w-4 h-4" />
-                          </button>
+                          </button> */}
                           <button
                             onClick={() => handleToggleStatus(user.id)}
                             className={`p-2 rounded-lg transition-all group-hover:scale-105 ${user.isActive

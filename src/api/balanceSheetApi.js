@@ -6,10 +6,19 @@ export const balanceSheetApi = {
     const response = await apiClient.get('/balance-sheets/my', { params });
     return response.data;
   },
+  getMyBalanceSheets: async (params) => {
+    const response = await apiClient.get('/balance-sheets/my', { params });
+    return response.data;
+  },
 
   // READ (Single - My)
   getMyBalanceSheet: async (id) => {
     const response = await apiClient.get(`/balance-sheets/my/${id}`);
+    return response.data;
+  },
+
+  getAllBalanceSheet: async (id) => {
+    const response = await apiClient.get(`/admin/balance-sheets/all`);
     return response.data;
   },
 

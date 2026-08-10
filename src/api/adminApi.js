@@ -36,22 +36,22 @@ export const adminApi = {
   },
   
   getUserBankDetails: async (userId) => {
-    const response = await apiClient.get(`/admin/bank-details/user/${userId}`);
+    const response = await apiClient.get(`/bank-details/user/${userId}`);
     return response.data;
   },
   
   upsertBankDetails: async (userId, data) => {
-    const response = await apiClient.put(`/admin/bank-details/user/${userId}`, data);
+    const response = await apiClient.put(`/bank-details/user/${userId}`, data);
     return response.data;
   },
   
   deleteBankDetails: async (userId) => {
-    const response = await apiClient.delete(`/admin/bank-details/user/${userId}`);
+    const response = await apiClient.delete(`/bank-details/user/${userId}`);
     return response.data;
   },
   
   verifyBankDetails: async (userId) => {
-    const response = await apiClient.patch(`/admin/bank-details/user/${userId}/verify`);
+    const response = await apiClient.patch(`/bank-details/user/${userId}/verify`);
     return response.data;
   },
 

@@ -4,18 +4,30 @@ import {
   FiX, FiUser, FiMail, FiPhone, FiCalendar,
   FiMapPin, FiCreditCard, FiLock, FiUserPlus,
   FiFileText, FiCheck, FiArrowRight, FiArrowLeft,
-  FiUpload, FiImage, FiFile, FiTrash2
+  FiUpload, FiFile, FiTrash2, FiAlertCircle,
+  FiDollarSign, FiHash, FiBook, FiGlobe
 } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
 import toast from 'react-hot-toast';
-import { authApi } from '../../api/authApi'; // adjust path
-import { nomineeApi } from '../../api/nomineeApi'; // adjust path
-import { filesAPI } from '../../api/files'; // adjust path
-import { documentApi } from '../../api/documentApi'; // adjust path
+import { authApi } from '../../api/authApi';
+import { nomineeApi } from '../../api/nomineeApi';
+import { filesAPI } from '../../api/files';
+import { documentApi } from '../../api/documentApi';
+
+// ---- Validation Patterns ----
+const PATTERNS = {
+  phone: /^[0-9]{10}$/,
+  pan: /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
+  aadhar: /^[0-9]{12}$/,
+  accountNumber: /^[0-9]{9,18}$/,
+  ifsc: /^[A-Z]{4}0[A-Z0-9]{6}$/,
+  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+};
 
 const CreateUserModal = ({ isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [stepErrors, setStepErrors] = useState({});
 
   // ---- Form State ----
   const [userData, setUserData] = useState({
@@ -36,8 +48,9 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     phone: '',
     email: '',
     address: '',
-    documentFile: null,   // file object for nominee document
-    documentPreview: null // for preview
+    aadhar:'',
+    documentFile: null,
+    documentPreview: null
   });
 
   const [bankData, setBankData] = useState({
@@ -75,6 +88,8 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    // Clear error for this field
+    setStepErrors(prev => ({ ...prev, [name]: null }));
   };
 
   const handleNomineeChange = (e) => {
@@ -83,6 +98,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       ...prev,
       [name]: value
     }));
+    setStepErrors(prev => ({ ...prev, ['nominee_' + name]: null }));
   };
 
   const handleBankChange = (e) => {
@@ -91,12 +107,12 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    setStepErrors(prev => ({ ...prev, ['bank_' + name]: null }));
   };
 
   const handleNomineeFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    // Validate
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
       toast.error('Only JPEG, PNG, GIF, WEBP images and PDFs are allowed');
@@ -111,6 +127,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       documentFile: file,
       documentPreview: file.type.startsWith('image/') ? URL.createObjectURL(file) : file.name
     }));
+    setStepErrors(prev => ({ ...prev, nominee_document: null }));
   };
 
   const removeNomineeFile = () => {
@@ -124,7 +141,6 @@ const CreateUserModal = ({ isOpen, onClose }) => {
   const handleDocumentUpload = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
-    // Validate
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
       toast.error('Only JPEG, PNG, GIF, WEBP images and PDFs are allowed');
@@ -140,6 +156,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       [type + 'File']: file,
       [type + 'Preview']: preview
     }));
+    setStepErrors(prev => ({ ...prev, ['doc_' + type]: null }));
   };
 
   const removeDocument = (type) => {
@@ -152,33 +169,49 @@ const CreateUserModal = ({ isOpen, onClose }) => {
 
   // ---- Validation ----
   const validateStep = (step) => {
+    const errors = {};
+
     switch (step) {
-      case 1:
-        if (!userData.fullName || !userData.email || !userData.password) {
-          toast.error('Please fill all required fields in Personal Details');
-          return false;
-        }
-        return true;
-      case 2:
-        // Nominee is optional? The backend may not require it, but we'll make it optional.
-        // If they want to add, they must fill required.
-        if (nomineeData.fullName && !nomineeData.relation) {
-          toast.error('Please fill Nominee Name and Relationship');
-          return false;
-        }
-        return true;
-      case 3:
-        if (!bankData.accountHolderName || !bankData.bankName || !bankData.accountNumber || !bankData.ifscCode) {
-          toast.error('Please fill all required fields in Bank Details');
-          return false;
-        }
-        return true;
-      case 4:
-        // Documents are optional
-        return true;
+      case 1: {
+        const { fullName, email, password, phone, pan, aadhar } = userData;
+        if (!fullName) errors.fullName = 'Full Name is required';
+        if (!email) errors.email = 'Email is required';
+        else if (!PATTERNS.email.test(email)) errors.email = 'Enter a valid email address';
+        if (!password) errors.password = 'Password is required';
+        else if (password.length < 6) errors.password = 'Password must be at least 6 characters';
+        if (phone && !PATTERNS.phone.test(phone)) errors.phone = 'Phone must be 10 digits';
+        if (pan && !PATTERNS.pan.test(pan)) errors.pan = 'PAN format: ABCDE1234F';
+        if (aadhar && !PATTERNS.aadhar.test(aadhar)) errors.aadhar = 'Aadhar must be 12 digits';
+        break;
+      }
+      case 2: {
+        const { fullName, relation, phone, email,aadhar } = nomineeData;
+        if (fullName && !relation) errors.nominee_relation = 'Relationship is required when nominee name is provided';
+        if (fullName && phone && !PATTERNS.phone.test(phone)) errors.nominee_phone = 'Phone must be 10 digits';
+        if (fullName && email && !PATTERNS.email.test(email)) errors.nominee_email = 'Enter a valid email address';
+        if (aadhar && !PATTERNS.aadhar.test(aadhar)) errors.aadhar = 'Aadhar must be 12 digits';
+        break;
+      }
+      case 3: {
+        const { accountHolderName, bankName, accountNumber, ifscCode } = bankData;
+        if (!accountHolderName) errors.bank_accountHolderName = 'Account holder name is required';
+        if (!bankName) errors.bank_bankName = 'Bank name is required';
+        if (!accountNumber) errors.bank_accountNumber = 'Account number is required';
+        else if (!PATTERNS.accountNumber.test(accountNumber)) errors.bank_accountNumber = 'Account number must be 9–18 digits';
+        if (!ifscCode) errors.bank_ifscCode = 'IFSC code is required';
+        else if (!PATTERNS.ifsc.test(ifscCode)) errors.bank_ifscCode = 'IFSC format: SBIN0001234';
+        break;
+      }
+      case 4: {
+        // Documents optional; no validation
+        break;
+      }
       default:
-        return true;
+        break;
     }
+
+    setStepErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const nextStep = () => {
@@ -218,27 +251,21 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       // 2. Create Nominee (if nominee name provided)
       if (nomineeData.fullName) {
         let nomineeDocPath = '';
-        // Upload nominee document if exists
         if (nomineeData.documentFile) {
-
           const uploadRes = await filesAPI.uploadSingle(nomineeData.documentFile);
-
-          console.log(uploadRes.data);
-
           if (uploadRes.data.success) {
             nomineeDocPath = uploadRes.data.data.filePath;
           } else {
             toast.error("Nominee document upload failed, continuing without it");
           }
-
         }
-        console.log("nomineeDocPath:", nomineeDocPath);
         const nomineePayload = {
           userId,
           fullName: nomineeData.fullName,
           relation: nomineeData.relation,
           phone: nomineeData.phone || undefined,
           email: nomineeData.email || undefined,
+          aadhar: nomineeData.aadhar || undefined,
           address: nomineeData.address || undefined,
           documentPath: nomineeDocPath || undefined
         };
@@ -282,14 +309,15 @@ const CreateUserModal = ({ isOpen, onClose }) => {
 
       // Reset form and close
       onClose();
-      // Reset state (optional)
+      // Reset state
       setUserData({
         email: '', password: '', fullName: '', phone: '', dateOfBirth: '', pan: '', aadhar: '', address: '', isSeniorCitizen: false
       });
-      setNomineeData({ fullName: '', relation: '', phone: '', email: '', address: '', documentFile: null, documentPreview: null });
+      setNomineeData({ fullName: '', relation: '', phone: '', email: '' , aadhar:'', address: '', documentFile: null, documentPreview: null });
       setBankData({ accountHolderName: '', bankName: '', accountNumber: '', ifscCode: '', branch: '', accountType: 'savings', isVerified: false });
       setDocuments({ panFile: null, panPreview: null, aadharFile: null, aadharPreview: null });
       setCurrentStep(1);
+      setStepErrors({});
       toast.success('User fully created!');
     } catch (error) {
       console.error('Create user error:', error);
@@ -299,90 +327,139 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     }
   };
 
+  // ---- Helper to render error message ----
+  const renderError = (field) => {
+    if (stepErrors[field]) {
+      return (
+        <div className="mt-1 text-xs text-red-600 flex items-center gap-1">
+          <FiAlertCircle size={12} />
+          <span>{stepErrors[field]}</span>
+        </div>
+      );
+    }
+    return null;
+  };
+
   // ---- Render Steps ----
   const renderPersonalDetails = () => (
     <div className="space-y-4">
+      {/* Error banner at top */}
+      {Object.keys(stepErrors).some(k => ['fullName','email','password','phone','pan','aadhar'].includes(k)) && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2">
+          <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-red-700">
+            <p className="font-semibold">Please fix the following errors:</p>
+            <ul className="list-disc list-inside text-xs">
+              {Object.entries(stepErrors).filter(([key]) => ['fullName','email','password','phone','pan','aadhar'].includes(key)).map(([key, msg]) => (
+                <li key={key}>{msg}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="form-label">Full Name <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            name="fullName"
-            value={userData.fullName}
-            onChange={handleUserChange}
-            className="form-input"
-            required
-            placeholder="Enter full name"
-          />
+          <div className="relative">
+            <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="fullName"
+              value={userData.fullName}
+              onChange={handleUserChange}
+              className={`form-input pl-10 ${stepErrors.fullName ? 'border-red-500' : ''}`}
+              placeholder="Enter full name"
+            />
+          </div>
+          {renderError('fullName')}
         </div>
         <div>
           <label className="form-label">Email <span className="text-red-500">*</span></label>
-          <input
-            type="email"
-            name="email"
-            value={userData.email}
-            onChange={handleUserChange}
-            className="form-input"
-            required
-            placeholder="Enter email"
-          />
+          <div className="relative">
+            <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="email"
+              name="email"
+              value={userData.email}
+              onChange={handleUserChange}
+              className={`form-input pl-10 ${stepErrors.email ? 'border-red-500' : ''}`}
+              placeholder="Enter email"
+            />
+          </div>
+          {renderError('email')}
         </div>
         <div>
           <label className="form-label">Password <span className="text-red-500">*</span></label>
-          <input
-            type="password"
-            name="password"
-            value={userData.password}
-            onChange={handleUserChange}
-            className="form-input"
-            required
-            minLength={6}
-            placeholder="Min 6 characters"
-          />
+          <div className="relative">
+            <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="password"
+              name="password"
+              value={userData.password}
+              onChange={handleUserChange}
+              className={`form-input pl-10 ${stepErrors.password ? 'border-red-500' : ''}`}
+              placeholder="Min 6 characters"
+            />
+          </div>
+          {renderError('password')}
         </div>
         <div>
           <label className="form-label">Phone</label>
-          <input
-            type="tel"
-            name="phone"
-            value={userData.phone}
-            onChange={handleUserChange}
-            className="form-input"
-            pattern="[0-9]{10}"
-            placeholder="10 digit number"
-          />
+          <div className="relative">
+            <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="tel"
+              name="phone"
+              value={userData.phone}
+              onChange={handleUserChange}
+              className={`form-input pl-10 ${stepErrors.phone ? 'border-red-500' : ''}`}
+              placeholder="10 digit number"
+            />
+          </div>
+          {renderError('phone')}
         </div>
         <div>
           <label className="form-label">Date of Birth</label>
-          <input
-            type="date"
-            name="dateOfBirth"
-            value={userData.dateOfBirth}
-            onChange={handleUserChange}
-            className="form-input"
-          />
+          <div className="relative">
+            <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="date"
+              name="dateOfBirth"
+              value={userData.dateOfBirth}
+              onChange={handleUserChange}
+              className="form-input pl-10"
+            />
+          </div>
         </div>
         <div>
           <label className="form-label">PAN</label>
-          <input
-            type="text"
-            name="pan"
-            value={userData.pan}
-            onChange={handleUserChange}
-            className="form-input uppercase"
-            placeholder="ABCDE1234F"
-          />
+          <div className="relative">
+            <FiCreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="pan"
+              value={userData.pan}
+              onChange={handleUserChange}
+              className={`form-input pl-10 uppercase ${stepErrors.pan ? 'border-red-500' : ''}`}
+              placeholder="ABCDE1234F"
+            />
+          </div>
+          {renderError('pan')}
         </div>
         <div>
           <label className="form-label">Aadhar</label>
-          <input
-            type="text"
-            name="aadhar"
-            value={userData.aadhar}
-            onChange={handleUserChange}
-            className="form-input"
-            placeholder="12 digit Aadhar"
-          />
+          <div className="relative">
+            <FiHash className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="aadhar"
+              value={userData.aadhar}
+              onChange={handleUserChange}
+              className={`form-input pl-10 ${stepErrors.aadhar ? 'border-red-500' : ''}`}
+              placeholder="12 digit Aadhar"
+            />
+          </div>
+          {renderError('aadhar')}
         </div>
         <div className="flex items-center gap-2 pt-2">
           <input
@@ -398,20 +475,36 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       </div>
       <div>
         <label className="form-label">Address</label>
-        <textarea
-          name="address"
-          value={userData.address}
-          onChange={handleUserChange}
-          className="form-input"
-          rows="2"
-          placeholder="Full address"
-        />
+        <div className="relative">
+          <FiMapPin className="absolute left-3 top-3 text-gray-400" size={18} />
+          <textarea
+            name="address"
+            value={userData.address}
+            onChange={handleUserChange}
+            className="form-input pl-10"
+            rows="2"
+            placeholder="Full address"
+          />
+        </div>
       </div>
     </div>
   );
 
   const renderNomineeDetails = () => (
     <div className="space-y-4">
+      {Object.keys(stepErrors).some(k => k.startsWith('nominee_')) && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2">
+          <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-red-700">
+            <p className="font-semibold">Please fix the following errors:</p>
+            <ul className="list-disc list-inside text-xs">
+              {Object.entries(stepErrors).filter(([key]) => key.startsWith('nominee_')).map(([key, msg]) => (
+                <li key={key}>{msg}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="form-label">Nominee Full Name</label>
@@ -431,31 +524,55 @@ const CreateUserModal = ({ isOpen, onClose }) => {
             name="relation"
             value={nomineeData.relation}
             onChange={handleNomineeChange}
-            className="form-input"
+            className={`form-input ${stepErrors.nominee_relation ? 'border-red-500' : ''}`}
             placeholder="e.g., Spouse, Son"
           />
+          {renderError('nominee_relation')}
         </div>
         <div>
           <label className="form-label">Phone</label>
-          <input
-            type="tel"
-            name="phone"
-            value={nomineeData.phone}
-            onChange={handleNomineeChange}
-            className="form-input"
-            placeholder="10 digit number"
-          />
+          <div className="relative">
+            <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="tel"
+              name="phone"
+              value={nomineeData.phone}
+              onChange={handleNomineeChange}
+              className={`form-input pl-10 ${stepErrors.nominee_phone ? 'border-red-500' : ''}`}
+              placeholder="10 digit number"
+            />
+          </div>
+          {renderError('nominee_phone')}
         </div>
         <div>
           <label className="form-label">Email</label>
-          <input
-            type="email"
-            name="email"
-            value={nomineeData.email}
-            onChange={handleNomineeChange}
-            className="form-input"
-            placeholder="Email address"
-          />
+          <div className="relative">
+            <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="email"
+              name="email"
+              value={nomineeData.email}
+              onChange={handleNomineeChange}
+              className={`form-input pl-10 ${stepErrors.nominee_email ? 'border-red-500' : ''}`}
+              placeholder="Email address"
+            />
+          </div>
+          {renderError('nominee_email')}
+        </div>
+        <div>
+          <label className="form-label">Nominee Aadhar</label>
+          <div className="relative">
+            <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="aadhar"
+              value={nomineeData.aadhar}
+              onChange={handleNomineeChange}
+              className={`form-input pl-10 ${stepErrors.nominee_aadhar ? 'border-red-500' : ''}`}
+              placeholder="Email address"
+            />
+          </div>
+          {renderError('nominee_aadhar')}
         </div>
       </div>
       <div>
@@ -472,19 +589,19 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       <div>
         <label className="form-label">Nominee Document</label>
         {nomineeData.documentFile ? (
-          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
             {nomineeData.documentPreview?.startsWith('data:image') || nomineeData.documentPreview?.startsWith('blob:') ? (
               <img src={nomineeData.documentPreview} alt="Nominee doc" className="h-16 w-16 object-cover rounded-lg" />
-            ) : nomineeData.documentPreview ? (
+            ) : (
               <div className="flex items-center gap-2">
                 <FiFile className="text-gray-500 w-5 h-5" />
                 <span className="text-sm truncate">{nomineeData.documentFile.name}</span>
               </div>
-            ) : null}
+            )}
             <button
               type="button"
               onClick={removeNomineeFile}
-              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg ml-auto"
             >
               <FiTrash2 className="w-4 h-4" />
             </button>
@@ -500,10 +617,11 @@ const CreateUserModal = ({ isOpen, onClose }) => {
             />
             <label
               htmlFor="nominee-doc"
-              className="flex flex-col items-center justify-center gap-1 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all"
+              className="flex flex-col items-center justify-center gap-1 w-full p-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all"
             >
-              <FiUpload className="text-gray-400 w-5 h-5" />
-              <span className="text-xs text-gray-500">Click to upload nominee document</span>
+              <FiUpload className="text-gray-400 w-6 h-6" />
+              <span className="text-sm text-gray-500">Click to upload nominee document</span>
+              <span className="text-xs text-gray-400">JPEG, PNG, PDF (Max 10MB)</span>
             </label>
           </div>
         )}
@@ -513,54 +631,79 @@ const CreateUserModal = ({ isOpen, onClose }) => {
 
   const renderBankDetails = () => (
     <div className="space-y-4">
+      {Object.keys(stepErrors).some(k => k.startsWith('bank_')) && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2">
+          <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-red-700">
+            <p className="font-semibold">Please fix the following errors:</p>
+            <ul className="list-disc list-inside text-xs">
+              {Object.entries(stepErrors).filter(([key]) => key.startsWith('bank_')).map(([key, msg]) => (
+                <li key={key}>{msg}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="form-label">Account Holder Name <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            name="accountHolderName"
-            value={bankData.accountHolderName}
-            onChange={handleBankChange}
-            className="form-input"
-            required
-            placeholder="Enter account holder name"
-          />
+          <div className="relative">
+            <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="accountHolderName"
+              value={bankData.accountHolderName}
+              onChange={handleBankChange}
+              className={`form-input pl-10 ${stepErrors.bank_accountHolderName ? 'border-red-500' : ''}`}
+              placeholder="Enter account holder name"
+            />
+          </div>
+          {renderError('bank_accountHolderName')}
         </div>
         <div>
           <label className="form-label">Bank Name <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            name="bankName"
-            value={bankData.bankName}
-            onChange={handleBankChange}
-            className="form-input"
-            required
-            placeholder="Enter bank name"
-          />
+          <div className="relative">
+            <FiBook className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="bankName"
+              value={bankData.bankName}
+              onChange={handleBankChange}
+              className={`form-input pl-10 ${stepErrors.bank_bankName ? 'border-red-500' : ''}`}
+              placeholder="Enter bank name"
+            />
+          </div>
+          {renderError('bank_bankName')}
         </div>
         <div>
           <label className="form-label">Account Number <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            name="accountNumber"
-            value={bankData.accountNumber}
-            onChange={handleBankChange}
-            className="form-input"
-            required
-            placeholder="Enter account number"
-          />
+          <div className="relative">
+            <FiCreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="accountNumber"
+              value={bankData.accountNumber}
+              onChange={handleBankChange}
+              className={`form-input pl-10 ${stepErrors.bank_accountNumber ? 'border-red-500' : ''}`}
+              placeholder="Enter account number (9-18 digits)"
+            />
+          </div>
+          {renderError('bank_accountNumber')}
         </div>
         <div>
           <label className="form-label">IFSC Code <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            name="ifscCode"
-            value={bankData.ifscCode}
-            onChange={handleBankChange}
-            className="form-input uppercase"
-            required
-            placeholder="e.g., SBIN0001234"
-          />
+          <div className="relative">
+            <FiGlobe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              name="ifscCode"
+              value={bankData.ifscCode}
+              onChange={handleBankChange}
+              className={`form-input pl-10 uppercase ${stepErrors.bank_ifscCode ? 'border-red-500' : ''}`}
+              placeholder="e.g., SBIN0001234"
+            />
+          </div>
+          {renderError('bank_ifscCode')}
         </div>
         <div>
           <label className="form-label">Branch</label>
@@ -615,23 +758,23 @@ const CreateUserModal = ({ isOpen, onClose }) => {
           </p>
         </div>
         {docFields.map(({ key, label }) => (
-          <div key={key} className="border border-gray-200 rounded-xl p-4">
+          <div key={key} className="border border-gray-200 rounded-xl p-4 transition-all hover:shadow-md">
             <label className="form-label text-sm">{label}</label>
             <div className="mt-2">
               {documents[key + 'File'] ? (
                 <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                   {documents[key + 'Preview']?.startsWith('data:image') || documents[key + 'Preview']?.startsWith('blob:') ? (
                     <img src={documents[key + 'Preview']} alt={label} className="h-16 w-16 object-cover rounded-lg" />
-                  ) : documents[key + 'Preview'] ? (
+                  ) : (
                     <div className="flex items-center gap-2">
                       <FiFile className="text-gray-500 w-5 h-5" />
                       <span className="text-sm truncate">{documents[key + 'File'].name}</span>
                     </div>
-                  ) : null}
+                  )}
                   <button
                     type="button"
                     onClick={() => removeDocument(key)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg ml-auto"
                   >
                     <FiTrash2 className="w-4 h-4" />
                   </button>
@@ -726,62 +869,62 @@ const CreateUserModal = ({ isOpen, onClose }) => {
 
         {renderStepIndicator()}
 
-          <div className="p-6">
-            {renderStepContent()}
-          </div>
+        <div className="p-6">
+          {renderStepContent()}
+        </div>
 
-          <div className="px-6 py-4 border-t border-gray-200 flex gap-3 bg-gray-50/50 rounded-b-2xl">
-            {currentStep > 1 ? (
-              <button
-                type="button"
-                onClick={prevStep}
-                className="flex-1 btn-secondary flex items-center justify-center gap-2"
-                disabled={loading}
-              >
-                <FiArrowLeft className="w-4 h-4" />
-                Previous
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 btn-secondary"
-                disabled={loading}
-              >
-                Cancel
-              </button>
-            )}
+        <div className="px-6 py-4 border-t border-gray-200 flex gap-3 bg-gray-50/50 rounded-b-2xl">
+          {currentStep > 1 ? (
+            <button
+              type="button"
+              onClick={prevStep}
+              className="flex-1 btn-secondary flex items-center justify-center gap-2"
+              disabled={loading}
+            >
+              <FiArrowLeft className="w-4 h-4" />
+              Previous
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 btn-secondary"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+          )}
 
-            {currentStep < totalSteps ? (
-              <button
-                type="button"
-                onClick={nextStep}
-                className="flex-1 btn-primary flex items-center justify-center gap-2"
-                disabled={loading}
-              >
-                Next
-                <FiArrowRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading}
-                className="flex-1 btn-primary flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <FaSpinner className="animate-spin" /> Creating...
-                  </span>
-                ) : (
-                  <>
-                    <FiCheck className="w-4 h-4" />
-                    Create User
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+          {currentStep < totalSteps ? (
+            <button
+              type="button"
+              onClick={nextStep}
+              className="flex-1 btn-primary flex items-center justify-center gap-2"
+              disabled={loading}
+            >
+              Next
+              <FiArrowRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 btn-primary flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <FaSpinner className="animate-spin" /> Creating...
+                </span>
+              ) : (
+                <>
+                  <FiCheck className="w-4 h-4" />
+                  Create User
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

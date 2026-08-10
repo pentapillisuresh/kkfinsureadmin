@@ -14,8 +14,8 @@ export const offerApi = {
   },
 
   // READ (All - Admin)
-  getAll: async (params) => {
-    const response = await apiClient.get('/offers/admin', { params });
+  getAll: async () => {
+    const response = await apiClient.get('/offers',);
     return response.data;
   },
 
