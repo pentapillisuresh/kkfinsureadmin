@@ -27,7 +27,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/documents', icon: FaFileAlt, label: 'Documents' },
     { path: '/nominees', icon: FaUserTie, label: 'Nominees' },
     { path: '/returns', icon: FaMoneyBillWave, label: 'Returns' },
-    { path: '/commissions', icon: FaCoins, label: 'Commissions' },
+    // { path: '/commissions', icon: FaCoins, label: 'Commissions' },
     { path: '/balance-sheets', icon: FaFileInvoice, label: 'Balance Sheets' },
     { path: '/points', icon: FaCoins, label: 'Points' },
   ];
