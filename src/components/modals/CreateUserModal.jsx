@@ -1,5 +1,5 @@
 // src/components/modals/CreateUserModal.jsx
-import React, { useState, useEffect,useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FiX, FiUser, FiMail, FiPhone, FiCalendar,
   FiMapPin, FiCreditCard, FiLock, FiUserPlus,
@@ -7,8 +7,7 @@ import {
   FiUpload, FiFile, FiTrash2, FiAlertCircle,
   FiDollarSign, FiHash, FiBook, FiGlobe
 } from 'react-icons/fi';
-import {FaSearch } from 'react-icons/fa';
-
+import { FaSearch } from 'react-icons/fa';
 import { FaSpinner } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { authApi } from '../../api/authApi';
@@ -16,7 +15,6 @@ import { nomineeApi } from '../../api/nomineeApi';
 import { filesAPI } from '../../api/files';
 import { documentApi } from '../../api/documentApi';
 import { adminApi } from '../../api/adminApi';
-
 
 const AutocompleteInput = ({
   label,
@@ -34,7 +32,6 @@ const AutocompleteInput = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const wrapperRef = useRef(null);
 
-  // Find selected option to display its label
   const selectedOption = options?.find(opt => opt?.id === value);
 
   useEffect(() => {
@@ -70,7 +67,6 @@ const AutocompleteInput = ({
     } else {
       setFilteredOptions([]);
       setShowDropdown(false);
-      // Clear selection if input cleared
       onChange(null);
     }
   };
@@ -84,11 +80,11 @@ const AutocompleteInput = ({
   return (
     <div className="relative" ref={wrapperRef}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      <div className="relative">
+      <div className="relative group">
         <input
           type="text"
           value={inputValue}
@@ -108,21 +104,25 @@ const AutocompleteInput = ({
               setShowDropdown(true);
             }
           }}
-          className={`input-field w-full ${error ? 'border-red-500' : ''}`}
+          className={`w-full px-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+            error ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+          }`}
           placeholder={placeholder}
         />
-        <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <FaSearch className={`absolute right-3.5 top-1/2 -translate-y-1/2 ${
+          error ? 'text-red-400' : 'text-gray-400 group-focus-within:text-blue-500'
+        } transition-colors duration-200`} />
       </div>
       {showDropdown && filteredOptions.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
           {filteredOptions.map(opt => (
             <div
               key={opt.id}
-              className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
+              className="px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 cursor-pointer border-b border-gray-100 last:border-0 transition-all duration-150"
               onClick={() => handleSelect(opt)}
             >
-              <div className="font-medium text-gray-800">{opt.fullName}</div>
-              <div className="text-xs text-gray-500 flex gap-2 flex-wrap">
+              <div className="font-semibold text-gray-800">{opt.fullName}</div>
+              <div className="text-xs text-gray-500 flex gap-3 flex-wrap mt-0.5">
                 <span>{opt.email}</span>
                 {opt.phone && <span>· {opt.phone}</span>}
                 {opt.batchId && <span>· {opt.batchId}</span>}
@@ -131,12 +131,11 @@ const AutocompleteInput = ({
           ))}
         </div>
       )}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1"><FiAlertCircle size={12} />{error}</p>}
     </div>
   );
 };
 
-// ---- Validation Patterns ----
 const PATTERNS = {
   phone: /^[0-9]{10}$/,
   pan: /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
@@ -153,7 +152,6 @@ const CreateUserModal = ({ isOpen, onClose }) => {
   const [isReferred, setIsReferred] = useState(false);
   const [users, setUsers] = useState([]);
 
-  // ---- Form State ----
   const [userData, setUserData] = useState({
     email: '',
     password: '',
@@ -197,7 +195,8 @@ const CreateUserModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     fetchUsers();
-  }, [])
+  }, []);
+
   const fetchUsers = async () => {
     try {
       const response = await adminApi.getUsersDropdown();
@@ -209,25 +208,22 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // ---- Step Configuration ----
   const steps = [
-    { id: 1, label: 'Personal Details', icon: FiUser },
-    { id: 2, label: 'Nominee Details', icon: FiUserPlus },
-    { id: 3, label: 'Bank Details', icon: FiCreditCard },
+    { id: 1, label: 'Personal', icon: FiUser },
+    { id: 2, label: 'Nominee', icon: FiUserPlus },
+    { id: 3, label: 'Bank', icon: FiCreditCard },
     { id: 4, label: 'Documents', icon: FiFileText },
   ];
   const totalSteps = steps.length;
 
   if (!isOpen) return null;
 
-  // ---- Handlers ----
   const handleUserChange = (e) => {
     const { name, value, type, checked } = e.target;
     setUserData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    // Clear error for this field
     setStepErrors(prev => ({ ...prev, [name]: null }));
   };
 
@@ -306,7 +302,6 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     }));
   };
 
-  // ---- Validation ----
   const validateStep = (step) => {
     const errors = {};
 
@@ -328,7 +323,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
         if (fullName && !relation) errors.nominee_relation = 'Relationship is required when nominee name is provided';
         if (fullName && phone && !PATTERNS.phone.test(phone)) errors.nominee_phone = 'Phone must be 10 digits';
         if (fullName && email && !PATTERNS.email.test(email)) errors.nominee_email = 'Enter a valid email address';
-        if (aadhar && !PATTERNS.aadhar.test(aadhar)) errors.aadhar = 'Aadhar must be 12 digits';
+        if (aadhar && !PATTERNS.aadhar.test(aadhar)) errors.nominee_aadhar = 'Aadhar must be 12 digits';
         break;
       }
       case 3: {
@@ -342,7 +337,6 @@ const CreateUserModal = ({ isOpen, onClose }) => {
         break;
       }
       case 4: {
-        // Documents optional; no validation
         break;
       }
       default:
@@ -363,14 +357,12 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  // ---- Submit ----
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateStep(currentStep)) return;
     setLoading(true);
 
     try {
-      // 1. Create User
       const userPayload = {
         email: userData.email,
         password: userData.password,
@@ -388,7 +380,6 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       const userId = userResponse.data.id;
       toast.success('User created successfully!');
 
-      // 2. Create Nominee (if nominee name provided)
       if (nomineeData.fullName) {
         let nomineeDocPath = '';
         if (nomineeData.documentFile) {
@@ -413,7 +404,6 @@ const CreateUserModal = ({ isOpen, onClose }) => {
         toast.success('Nominee added!');
       }
 
-      // 3. Create/Update Bank Details
       if (bankData.accountHolderName) {
         const bankPayload = {
           userId,
@@ -429,7 +419,6 @@ const CreateUserModal = ({ isOpen, onClose }) => {
         toast.success('Bank details saved!');
       }
 
-      // 4. Upload KYC Documents (PAN & Aadhar)
       const docTypes = [
         { key: 'pan', title: 'PAN Card' },
         { key: 'aadhar', title: 'Aadhar Card' }
@@ -447,9 +436,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
         }
       }
 
-      // Reset form and close
       onClose();
-      // Reset state
       setUserData({
         email: '', password: '', fullName: '', phone: '', dateOfBirth: '', pan: '', aadhar: '', address: '', isSeniorCitizen: false, referrerId: null
       });
@@ -467,12 +454,11 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // ---- Helper to render error message ----
   const renderError = (field) => {
     if (stepErrors[field]) {
       return (
-        <div className="mt-1 text-xs text-red-600 flex items-center gap-1">
-          <FiAlertCircle size={12} />
+        <div className="mt-1.5 text-xs text-red-500 flex items-center gap-1.5">
+          <FiAlertCircle size={13} />
           <span>{stepErrors[field]}</span>
         </div>
       );
@@ -480,152 +466,179 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     return null;
   };
 
-  // ---- Render Steps ----
   const renderPersonalDetails = () => (
-    <div className="space-y-4">
-      {/* Error banner at top */}
+    <div className="space-y-5">
       {Object.keys(stepErrors).some(k => ['fullName', 'email', 'password', 'phone', 'pan', 'aadhar'].includes(k)) && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2">
-          <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" />
+        <div className="bg-gradient-to-r from-red-50 to-red-50/50 border-l-4 border-red-500 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+          <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" size={20} />
           <div className="text-sm text-red-700">
-            <p className="font-semibold">Please fix the following errors:</p>
-            <ul className="list-disc list-inside text-xs">
+            <p className="font-semibold text-red-800">Please fix the following errors:</p>
+            <ul className="list-disc list-inside text-xs space-y-0.5 mt-1">
               {Object.entries(stepErrors).filter(([key]) => ['fullName', 'email', 'password', 'phone', 'pan', 'aadhar'].includes(key)).map(([key, msg]) => (
-                <li key={key}>{msg}</li>
+                <li key={key} className="text-red-600">{msg}</li>
               ))}
             </ul>
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
-          <label className="form-label">Full Name <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Full Name <span className="text-red-500">*</span>
+          </label>
+          <div className="relative group">
+            <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="text"
               name="fullName"
               value={userData.fullName}
               onChange={handleUserChange}
-              className={`form-input pl-10 ${stepErrors.fullName ? 'border-red-500' : ''}`}
-              placeholder="Enter full name"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.fullName ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="John Doe"
             />
           </div>
           {renderError('fullName')}
         </div>
         <div>
-          <label className="form-label">Email <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Email <span className="text-red-500">*</span>
+          </label>
+          <div className="relative group">
+            <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="email"
               name="email"
               value={userData.email}
               onChange={handleUserChange}
-              className={`form-input pl-10 ${stepErrors.email ? 'border-red-500' : ''}`}
-              placeholder="Enter email"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.email ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="john@example.com"
             />
           </div>
           {renderError('email')}
         </div>
         <div>
-          <label className="form-label">Password <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Password <span className="text-red-500">*</span>
+          </label>
+          <div className="relative group">
+            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="password"
               name="password"
               value={userData.password}
               onChange={handleUserChange}
-              className={`form-input pl-10 ${stepErrors.password ? 'border-red-500' : ''}`}
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.password ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
               placeholder="Min 6 characters"
             />
           </div>
           {renderError('password')}
         </div>
         <div>
-          <label className="form-label">Phone</label>
-          <div className="relative">
-            <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Phone
+          </label>
+          <div className="relative group">
+            <FiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="tel"
               name="phone"
               maxLength={10}
               value={userData.phone}
               onChange={handleUserChange}
-              className={`form-input pl-10 ${stepErrors.phone ? 'border-red-500' : ''}`}
-              placeholder="10 digit number"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.phone ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="9876543210"
             />
           </div>
           {renderError('phone')}
         </div>
         <div>
-          <label className="form-label">Date of Birth</label>
-          <div className="relative">
-            <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Date of Birth
+          </label>
+          <div className="relative group">
+            <FiCalendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="date"
               name="dateOfBirth"
               value={userData.dateOfBirth}
               onChange={handleUserChange}
-              className="form-input pl-10"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
             />
           </div>
         </div>
         <div>
-          <label className="form-label">PAN</label>
-          <div className="relative">
-            <FiCreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            PAN
+          </label>
+          <div className="relative group">
+            <FiCreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="text"
               name="pan"
               value={userData.pan}
               onChange={handleUserChange}
-              className={`form-input pl-10 uppercase ${stepErrors.pan ? 'border-red-500' : ''}`}
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm uppercase transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.pan ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
               placeholder="ABCDE1234F"
             />
           </div>
           {renderError('pan')}
         </div>
         <div>
-          <label className="form-label">Aadhar</label>
-          <div className="relative">
-            <FiHash className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Aadhar
+          </label>
+          <div className="relative group">
+            <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="text"
               name="aadhar"
               value={userData.aadhar}
               onChange={handleUserChange}
-              className={`form-input pl-10 ${stepErrors.aadhar ? 'border-red-500' : ''}`}
-              placeholder="12 digit Aadhar"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.aadhar ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="123456789012"
             />
           </div>
           {renderError('aadhar')}
         </div>
-        <div className="flex items-center gap-2 pt-2">
+      </div>
+      <div className="flex flex-wrap items-center gap-6">
+        <label className="flex items-center gap-2.5 cursor-pointer group">
           <input
             type="checkbox"
             id="isSeniorCitizen"
             name="isSeniorCitizen"
             checked={userData.isSeniorCitizen}
             onChange={handleUserChange}
-            className="w-4 h-4 text-blue-600 rounded border-gray-300"
+            className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer transition-all"
           />
-          <label htmlFor="isSeniorCitizen" className="text-sm text-gray-700">Senior Citizen</label>
-        </div>
-        <div className="flex items-center gap-2 pt-2">
+          <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Senior Citizen</span>
+        </label>
+        <label className="flex items-center gap-2.5 cursor-pointer group">
           <input
             type="checkbox"
             id="isreferred"
             name="isreferred"
             checked={isReferred}
             onChange={() => { setIsReferred(!isReferred) }}
-            className="w-4 h-4 text-blue-600 rounded border-gray-300"
+            className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer transition-all"
           />
-          <label htmlFor="isreferred" className="text-sm text-gray-700">Is Referrer</label>
-        </div>
-
-       {isReferred && <div>
+          <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Is Referrer</span>
+        </label>
+      </div>
+      {isReferred && (
+        <div className="mt-2">
           <AutocompleteInput
             label="Referrer"
             placeholder="Type to search referrer..."
@@ -633,19 +646,21 @@ const CreateUserModal = ({ isOpen, onClose }) => {
             value={userData.referrerId}
             onChange={(id) => setUserData({ ...userData, referrerId: id })}
           />
-        </div>}
-      </div>
+        </div>
+      )}
       <div>
-        <label className="form-label">Address</label>
-        <div className="relative">
-          <FiMapPin className="absolute left-3 top-3 text-gray-400" size={18} />
+        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+          Address
+        </label>
+        <div className="relative group">
+          <FiMapPin className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
           <textarea
             name="address"
             value={userData.address}
             onChange={handleUserChange}
-            className="form-input pl-10"
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10 min-h-[80px] resize-y"
             rows="2"
-            placeholder="Full address"
+            placeholder="123 Main St, City, State, Country"
           />
         </div>
       </div>
@@ -653,118 +668,140 @@ const CreateUserModal = ({ isOpen, onClose }) => {
   );
 
   const renderNomineeDetails = () => (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {Object.keys(stepErrors).some(k => k.startsWith('nominee_')) && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2">
-          <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" />
+        <div className="bg-gradient-to-r from-red-50 to-red-50/50 border-l-4 border-red-500 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+          <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" size={20} />
           <div className="text-sm text-red-700">
-            <p className="font-semibold">Please fix the following errors:</p>
-            <ul className="list-disc list-inside text-xs">
+            <p className="font-semibold text-red-800">Please fix the following errors:</p>
+            <ul className="list-disc list-inside text-xs space-y-0.5 mt-1">
               {Object.entries(stepErrors).filter(([key]) => key.startsWith('nominee_')).map(([key, msg]) => (
-                <li key={key}>{msg}</li>
+                <li key={key} className="text-red-600">{msg}</li>
               ))}
             </ul>
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
-          <label className="form-label">Nominee Full Name</label>
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Nominee Full Name
+          </label>
           <input
             type="text"
             name="fullName"
             value={nomineeData.fullName}
             onChange={handleNomineeChange}
-            className="form-input"
-            placeholder="Enter nominee name"
+            className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+            placeholder="Jane Doe"
           />
         </div>
         <div>
-          <label className="form-label">Relationship</label>
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Relationship
+          </label>
           <input
             type="text"
             name="relation"
             value={nomineeData.relation}
             onChange={handleNomineeChange}
-            className={`form-input ${stepErrors.nominee_relation ? 'border-red-500' : ''}`}
-            placeholder="e.g., Spouse, Son"
+            className={`w-full px-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+              stepErrors.nominee_relation ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+            }`}
+            placeholder="Spouse, Son, Daughter"
           />
           {renderError('nominee_relation')}
         </div>
         <div>
-          <label className="form-label">Phone</label>
-          <div className="relative">
-            <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Phone
+          </label>
+          <div className="relative group">
+            <FiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="tel"
               name="phone"
               maxLength={10}
               value={nomineeData.phone}
               onChange={handleNomineeChange}
-              className={`form-input pl-10 ${stepErrors.nominee_phone ? 'border-red-500' : ''}`}
-              placeholder="10 digit number"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.nominee_phone ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="9876543210"
             />
           </div>
           {renderError('nominee_phone')}
         </div>
         <div>
-          <label className="form-label">Email</label>
-          <div className="relative">
-            <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Email
+          </label>
+          <div className="relative group">
+            <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="email"
               name="email"
               value={nomineeData.email}
               onChange={handleNomineeChange}
-              className={`form-input pl-10 ${stepErrors.nominee_email ? 'border-red-500' : ''}`}
-              placeholder="Email address"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.nominee_email ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="jane@example.com"
             />
           </div>
           {renderError('nominee_email')}
         </div>
         <div>
-          <label className="form-label">Nominee Aadhar</label>
-          <div className="relative">
-            <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Nominee Aadhar
+          </label>
+          <div className="relative group">
+            <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="text"
               name="aadhar"
               value={nomineeData.aadhar}
               onChange={handleNomineeChange}
-              className={`form-input pl-10 ${stepErrors.nominee_aadhar ? 'border-red-500' : ''}`}
-              placeholder="Email address"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.nominee_aadhar ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="123456789012"
             />
           </div>
           {renderError('nominee_aadhar')}
         </div>
       </div>
       <div>
-        <label className="form-label">Address</label>
+        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+          Address
+        </label>
         <textarea
           name="address"
           value={nomineeData.address}
           onChange={handleNomineeChange}
-          className="form-input"
+          className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10 min-h-[80px] resize-y"
           rows="2"
-          placeholder="Nominee address"
+          placeholder="Nominee's address"
         />
       </div>
       <div>
-        <label className="form-label">Nominee Document</label>
+        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+          Nominee Document
+        </label>
         {nomineeData.documentFile ? (
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-gray-50 to-gray-50/50 rounded-xl border-2 border-gray-200">
             {nomineeData.documentPreview?.startsWith('data:image') || nomineeData.documentPreview?.startsWith('blob:') ? (
-              <img src={nomineeData.documentPreview} alt="Nominee doc" className="h-16 w-16 object-cover rounded-lg" />
+              <img src={nomineeData.documentPreview} alt="Nominee doc" className="h-16 w-16 object-cover rounded-lg border-2 border-gray-200" />
             ) : (
               <div className="flex items-center gap-2">
                 <FiFile className="text-gray-500 w-5 h-5" />
-                <span className="text-sm truncate">{nomineeData.documentFile.name}</span>
+                <span className="text-sm font-medium text-gray-700 truncate">{nomineeData.documentFile.name}</span>
               </div>
             )}
             <button
               type="button"
               onClick={removeNomineeFile}
-              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg ml-auto"
+              className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg ml-auto transition-all duration-200"
             >
               <FiTrash2 className="w-4 h-4" />
             </button>
@@ -780,10 +817,12 @@ const CreateUserModal = ({ isOpen, onClose }) => {
             />
             <label
               htmlFor="nominee-doc"
-              className="flex flex-col items-center justify-center gap-1 w-full p-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all"
+              className="flex flex-col items-center justify-center gap-2 w-full p-8 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-gradient-to-b hover:from-blue-50 hover:to-transparent transition-all duration-300 group"
             >
-              <FiUpload className="text-gray-400 w-6 h-6" />
-              <span className="text-sm text-gray-500">Click to upload nominee document</span>
+              <div className="p-3 bg-blue-50 rounded-full group-hover:bg-blue-100 transition-colors duration-300">
+                <FiUpload className="text-blue-500 w-6 h-6" />
+              </div>
+              <span className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors">Click to upload nominee document</span>
               <span className="text-xs text-gray-400">JPEG, PNG, PDF (Max 10MB)</span>
             </label>
           </div>
@@ -793,99 +832,119 @@ const CreateUserModal = ({ isOpen, onClose }) => {
   );
 
   const renderBankDetails = () => (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {Object.keys(stepErrors).some(k => k.startsWith('bank_')) && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2">
-          <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" />
+        <div className="bg-gradient-to-r from-red-50 to-red-50/50 border-l-4 border-red-500 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+          <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" size={20} />
           <div className="text-sm text-red-700">
-            <p className="font-semibold">Please fix the following errors:</p>
-            <ul className="list-disc list-inside text-xs">
+            <p className="font-semibold text-red-800">Please fix the following errors:</p>
+            <ul className="list-disc list-inside text-xs space-y-0.5 mt-1">
               {Object.entries(stepErrors).filter(([key]) => key.startsWith('bank_')).map(([key, msg]) => (
-                <li key={key}>{msg}</li>
+                <li key={key} className="text-red-600">{msg}</li>
               ))}
             </ul>
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
-          <label className="form-label">Account Holder Name <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Account Holder Name <span className="text-red-500">*</span>
+          </label>
+          <div className="relative group">
+            <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="text"
               name="accountHolderName"
               value={bankData.accountHolderName}
               onChange={handleBankChange}
-              className={`form-input pl-10 ${stepErrors.bank_accountHolderName ? 'border-red-500' : ''}`}
-              placeholder="Enter account holder name"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.bank_accountHolderName ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="John Doe"
             />
           </div>
           {renderError('bank_accountHolderName')}
         </div>
         <div>
-          <label className="form-label">Bank Name <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <FiBook className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Bank Name <span className="text-red-500">*</span>
+          </label>
+          <div className="relative group">
+            <FiBook className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="text"
               name="bankName"
               value={bankData.bankName}
               onChange={handleBankChange}
-              className={`form-input pl-10 ${stepErrors.bank_bankName ? 'border-red-500' : ''}`}
-              placeholder="Enter bank name"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.bank_bankName ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="State Bank of India"
             />
           </div>
           {renderError('bank_bankName')}
         </div>
         <div>
-          <label className="form-label">Account Number <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <FiCreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Account Number <span className="text-red-500">*</span>
+          </label>
+          <div className="relative group">
+            <FiCreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="text"
               name="accountNumber"
               value={bankData.accountNumber}
               onChange={handleBankChange}
-              className={`form-input pl-10 ${stepErrors.bank_accountNumber ? 'border-red-500' : ''}`}
-              placeholder="Enter account number (9-18 digits)"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.bank_accountNumber ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="123456789012"
             />
           </div>
           {renderError('bank_accountNumber')}
         </div>
         <div>
-          <label className="form-label">IFSC Code <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <FiGlobe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            IFSC Code <span className="text-red-500">*</span>
+          </label>
+          <div className="relative group">
+            <FiGlobe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
             <input
               type="text"
               name="ifscCode"
               value={bankData.ifscCode}
               onChange={handleBankChange}
-              className={`form-input pl-10 uppercase ${stepErrors.bank_ifscCode ? 'border-red-500' : ''}`}
-              placeholder="e.g., SBIN0001234"
+              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm uppercase transition-all duration-200 outline-none focus:bg-white ${
+                stepErrors.bank_ifscCode ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+              }`}
+              placeholder="SBIN0001234"
             />
           </div>
           {renderError('bank_ifscCode')}
         </div>
         <div>
-          <label className="form-label">Branch</label>
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Branch
+          </label>
           <input
             type="text"
             name="branch"
             value={bankData.branch}
             onChange={handleBankChange}
-            className="form-input"
-            placeholder="Branch name"
+            className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+            placeholder="Main Branch"
           />
         </div>
         <div>
-          <label className="form-label">Account Type</label>
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+            Account Type
+          </label>
           <select
             name="accountType"
             value={bankData.accountType}
             onChange={handleBankChange}
-            className="form-input"
+            className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10 appearance-none cursor-pointer"
           >
             <option value="savings">Savings</option>
             <option value="current">Current</option>
@@ -893,17 +952,17 @@ const CreateUserModal = ({ isOpen, onClose }) => {
           </select>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <label className="flex items-center gap-2.5 cursor-pointer group">
         <input
           type="checkbox"
           id="bankVerified"
           name="isVerified"
           checked={bankData.isVerified}
           onChange={handleBankChange}
-          className="w-4 h-4 text-blue-600 rounded border-gray-300"
+          className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer transition-all"
         />
-        <label htmlFor="bankVerified" className="text-sm text-gray-700">Mark as Verified</label>
-      </div>
+        <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Mark as Verified</span>
+      </label>
     </div>
   );
 
@@ -913,31 +972,33 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       { key: 'aadhar', label: 'Aadhar Card' }
     ];
     return (
-      <div className="space-y-4">
-        <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-200/50">
-          <p className="text-sm text-blue-600 flex items-center gap-2">
-            <FiFileText className="w-4 h-4" />
+      <div className="space-y-5">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50/50 rounded-xl p-4 border border-blue-200/50 shadow-sm">
+          <p className="text-sm text-blue-700 flex items-center gap-2 font-medium">
+            <FiFileText className="w-5 h-5 text-blue-600" />
             Upload KYC documents (Max 10MB each)
           </p>
         </div>
         {docFields.map(({ key, label }) => (
-          <div key={key} className="border border-gray-200 rounded-xl p-4 transition-all hover:shadow-md">
-            <label className="form-label text-sm">{label}</label>
-            <div className="mt-2">
+          <div key={key} className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300 hover:shadow-md">
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">
+              {label}
+            </label>
+            <div>
               {documents[key + 'File'] ? (
-                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-gray-50 to-gray-50/50 rounded-xl border-2 border-gray-200">
                   {documents[key + 'Preview']?.startsWith('data:image') || documents[key + 'Preview']?.startsWith('blob:') ? (
-                    <img src={documents[key + 'Preview']} alt={label} className="h-16 w-16 object-cover rounded-lg" />
+                    <img src={documents[key + 'Preview']} alt={label} className="h-16 w-16 object-cover rounded-lg border-2 border-gray-200" />
                   ) : (
                     <div className="flex items-center gap-2">
                       <FiFile className="text-gray-500 w-5 h-5" />
-                      <span className="text-sm truncate">{documents[key + 'File'].name}</span>
+                      <span className="text-sm font-medium text-gray-700 truncate">{documents[key + 'File'].name}</span>
                     </div>
                   )}
                   <button
                     type="button"
                     onClick={() => removeDocument(key)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg ml-auto"
+                    className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg ml-auto transition-all duration-200"
                   >
                     <FiTrash2 className="w-4 h-4" />
                   </button>
@@ -953,10 +1014,12 @@ const CreateUserModal = ({ isOpen, onClose }) => {
                   />
                   <label
                     htmlFor={`doc-${key}`}
-                    className="flex flex-col items-center justify-center gap-1 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all"
+                    className="flex flex-col items-center justify-center gap-2 w-full p-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-gradient-to-b hover:from-blue-50 hover:to-transparent transition-all duration-300 group"
                   >
-                    <FiUpload className="text-gray-400 w-5 h-5" />
-                    <span className="text-xs text-gray-500">Click to upload</span>
+                    <div className="p-2.5 bg-gray-100 rounded-full group-hover:bg-blue-100 transition-colors duration-300">
+                      <FiUpload className="text-gray-500 group-hover:text-blue-500 w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-medium text-gray-500 group-hover:text-gray-700 transition-colors">Click to upload</span>
                   </label>
                 </div>
               )}
@@ -978,32 +1041,35 @@ const CreateUserModal = ({ isOpen, onClose }) => {
   };
 
   const renderStepIndicator = () => (
-    <div className="px-6 pt-6">
-      <div className="flex items-center justify-between">
+    <div className="px-8 pt-8">
+      <div className="flex items-center justify-between relative">
         {steps.map((step, index) => {
           const isActive = currentStep === step.id;
           const isCompleted = currentStep > step.id;
           return (
             <React.Fragment key={step.id}>
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center relative z-10">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isActive
-                    ? 'bg-blue-600 text-white ring-4 ring-blue-200 shadow-lg shadow-blue-500/30'
-                    : isCompleted
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-500'
-                    }`}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                    isActive
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105'
+                      : isCompleted
+                        ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30'
+                        : 'bg-gray-100 text-gray-400 border-2 border-gray-200'
+                  }`}
                 >
-                  {isCompleted ? <FiCheck className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
+                  {isCompleted ? <FiCheck className="w-6 h-6" /> : <step.icon className="w-6 h-6" />}
                 </div>
-                <span className={`text-xs mt-1.5 font-medium ${isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-400'
-                  }`}>
+                <span className={`text-xs font-semibold mt-2 transition-colors duration-200 ${
+                  isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-400'
+                }`}>
                   {step.label}
                 </span>
               </div>
               {index < steps.length - 1 && (
-                <div className={`flex-1 h-0.5 ${currentStep > step.id ? 'bg-green-500' : 'bg-gray-200'
-                  }`} />
+                <div className={`flex-1 h-1 rounded-full transition-all duration-500 ${
+                  currentStep > step.id ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gray-200'
+                }`} />
               )}
             </React.Fragment>
           );
@@ -1013,35 +1079,38 @@ const CreateUserModal = ({ isOpen, onClose }) => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white/95 backdrop-blur-sm z-10 rounded-t-2xl">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white">
-              <FiUserPlus className="w-4 h-4" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scaleUp">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white/95 backdrop-blur-sm z-10 rounded-t-3xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+              <FiUserPlus className="w-5 h-5" />
             </div>
-            Create New User
-          </h3>
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">Create New User</h3>
+              <p className="text-xs text-gray-500">Step {currentStep} of {totalSteps}</p>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-110"
           >
-            <FiX className="text-gray-500 w-5 h-5" />
+            <FiX className="text-gray-400 hover:text-gray-600 w-5 h-5" />
           </button>
         </div>
 
         {renderStepIndicator()}
 
-        <div className="p-6">
+        <div className="p-8">
           {renderStepContent()}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex gap-3 bg-gray-50/50 rounded-b-2xl">
+        <div className="px-8 py-5 border-t border-gray-200 flex gap-3 bg-gradient-to-r from-gray-50 to-gray-50/50 rounded-b-3xl">
           {currentStep > 1 ? (
             <button
               type="button"
               onClick={prevStep}
-              className="flex-1 btn-secondary flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-2.5 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 flex items-center justify-center gap-2"
               disabled={loading}
             >
               <FiArrowLeft className="w-4 h-4" />
@@ -1051,7 +1120,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 btn-secondary"
+              className="flex-1 px-6 py-2.5 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
               disabled={loading}
             >
               Cancel
@@ -1062,7 +1131,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={nextStep}
-              className="flex-1 btn-primary flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
               disabled={loading}
             >
               Next
@@ -1073,7 +1142,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
               type="button"
               onClick={handleSubmit}
               disabled={loading}
-              className="flex-1 btn-primary flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg shadow-green-500/30 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

@@ -17,7 +17,7 @@ import {
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const menuItems = [
-   { path: '/', icon: FaHome, label: 'Dashboard' },
+    { path: '/', icon: FaHome, label: 'Dashboard' },
     { path: '/users', icon: FaUsers, label: 'Users' },
     { path: '/investments', icon: FaWallet, label: 'Investments' },
     { path: '/plans', icon: FaChartLine, label: 'Plans' },
@@ -27,7 +27,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/documents', icon: FaFileAlt, label: 'Documents' },
     { path: '/nominees', icon: FaUserTie, label: 'Nominees' },
     { path: '/returns', icon: FaMoneyBillWave, label: 'Returns' },
-    // { path: '/commissions', icon: FaCoins, label: 'Commissions' },
     { path: '/balance-sheets', icon: FaFileInvoice, label: 'Balance Sheets' },
     { path: '/points', icon: FaCoins, label: 'Points' },
   ];
@@ -38,9 +37,23 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         isOpen ? 'w-64' : 'w-20'
       }`}
     >
-      <div className="flex items-center justify-center h-16 border-b border-primary-700">
-        <span className={`font-bold text-xl ${!isOpen && 'hidden'}`}>KKFINSURE</span>
-        <span className={`font-bold text-2xl ${isOpen && 'hidden'}`}>K</span>
+      {/* Logo Section */}
+      <div className="flex flex-col items-center justify-center h-24 border-b border-primary-700">
+        <img 
+          src="/images/logo3.jpeg" 
+          alt="KKFINSURE Logo" 
+          className={`h-12 w-auto object-contain ${!isOpen && 'hidden'}`}
+        />
+        <img 
+          src="/images/logo3.jpeg" 
+          alt="KKFINSURE Logo" 
+          className={`h-8 w-auto object-contain ${isOpen && 'hidden'}`}
+        />
+        {isOpen && (
+          <span className="text-xs text-white mt-1 tracking-wider">
+            Wealth | Trust | Growth
+          </span>
+        )}
       </div>
 
       <nav className="mt-4">

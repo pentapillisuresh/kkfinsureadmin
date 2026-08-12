@@ -10,7 +10,8 @@ import {
   FiCreditCard, FiUserPlus, FiLock, FiEdit, FiToggleRight, FiToggleLeft,
   FiDownload, FiFileText, FiAward, FiPieChart, FiDollarSign, FiClock,
   FiCheckCircle, FiXCircle, FiLink, FiImage, FiFile, FiActivity,
-  FiUsers, FiBriefcase, FiStar, FiX, FiUpload, FiTrash2, FiAlertCircle
+  FiUsers, FiBriefcase, FiStar, FiX, FiUpload, FiTrash2, FiAlertCircle,
+  FiBook, FiGlobe, FiHash
 } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
 import { formatDate, getStatusColor, getInitials } from '../../utils/helpers';
@@ -54,9 +55,12 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let finalValue = type === 'checkbox' ? checked : value;
+    // Convert PAN to uppercase
+    if (name === 'pan') finalValue = value.toUpperCase();
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: finalValue,
     }));
   };
 
@@ -68,64 +72,173 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white/95 z-10 rounded-t-2xl">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-500 rounded-xl flex items-center justify-center text-white">
-              <FiUser className="w-4 h-4" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scaleUp">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white/95 backdrop-blur-sm z-10 rounded-t-3xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+              <FiUser className="w-5 h-5" />
             </div>
-            Edit Profile
-          </h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <FiX className="text-gray-500 w-5 h-5" />
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">Edit Profile</h3>
+              <p className="text-xs text-gray-500">Update user information</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-110">
+            <FiX className="text-gray-400 hover:text-gray-600 w-5 h-5" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="form-label">Full Name <span className="text-red-500">*</span></label>
-              <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className="form-input" required />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <div className="relative group">
+                <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="fullName" 
+                  value={formData.fullName} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+                  required 
+                  placeholder="John Doe"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Phone <span className="text-red-500">*</span></label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="form-input" required />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Phone <span className="text-red-500">*</span>
+              </label>
+              <div className="relative group">
+                <FiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="tel" 
+                  name="phone" 
+                  value={formData.phone} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+                  required 
+                  placeholder="9876543210"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Date of Birth</label>
-              <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} className="form-input" />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Date of Birth
+              </label>
+              <div className="relative group">
+                <FiCalendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="date" 
+                  name="dateOfBirth" 
+                  value={formData.dateOfBirth} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Batch ID</label>
-              <input type="text" name="batchId" value={formData.batchId} onChange={handleChange} className="form-input" />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Batch ID
+              </label>
+              <div className="relative group">
+                <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="batchId" 
+                  value={formData.batchId} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+                  placeholder="BATCH-001"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">PAN</label>
-              <input type="text" name="pan" value={formData.pan} onChange={handleChange} className="form-input uppercase" />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                PAN
+              </label>
+              <div className="relative group">
+                <FiCreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="pan" 
+                  value={formData.pan} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm uppercase transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Aadhar</label>
-              <input type="text" name="aadhar" value={formData.aadhar} onChange={handleChange} className="form-input" />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Aadhar
+              </label>
+              <div className="relative group">
+                <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="aadhar" 
+                  value={formData.aadhar} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+                  placeholder="123456789012"
+                  maxLength={12}
+                />
+              </div>
             </div>
           </div>
           <div>
-            <label className="form-label">Address</label>
-            <textarea name="address" value={formData.address} onChange={handleChange} className="form-input" rows="2" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center gap-2">
-              <input type="checkbox" name="isSeniorCitizen" checked={formData.isSeniorCitizen} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded" />
-              <label className="text-sm text-gray-700">Senior Citizen</label>
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+              Address
+            </label>
+            <div className="relative group">
+              <FiMapPin className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+              <textarea 
+                name="address" 
+                value={formData.address} 
+                onChange={handleChange} 
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10 min-h-[80px] resize-y"
+                rows="2" 
+                placeholder="123 Main St, City, State, Country"
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded" />
-              <label className="text-sm text-gray-700">Active</label>
-            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <label className="flex items-center gap-2.5 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                name="isSeniorCitizen" 
+                checked={formData.isSeniorCitizen} 
+                onChange={handleChange} 
+                className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer transition-all"
+              />
+              <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Senior Citizen</span>
+            </label>
+            <label className="flex items-center gap-2.5 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                name="isActive" 
+                checked={formData.isActive} 
+                onChange={handleChange} 
+                className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer transition-all"
+              />
+              <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Active</span>
+            </label>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="form-label">Partner Type</label>
-              <select name="partnerType" value={formData.partnerType} onChange={handleChange} className="form-input">
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Partner Type
+              </label>
+              <select 
+                name="partnerType" 
+                value={formData.partnerType} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10 appearance-none cursor-pointer"
+              >
                 <option value="none">None</option>
                 <option value="referral">Referral</option>
                 <option value="authorised">Authorised</option>
@@ -133,14 +246,30 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
               </select>
             </div>
             <div>
-              <label className="form-label">Commission Rate (%)</label>
-              <input type="number" name="partnerCommissionRate" value={formData.partnerCommissionRate} onChange={handleChange} className="form-input" min="0" step="0.1" />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Commission Rate (%)
+              </label>
+              <div className="relative group">
+                <FiDollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="number" 
+                  name="partnerCommissionRate" 
+                  value={formData.partnerCommissionRate} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+                  min="0" 
+                  step="0.1"
+                  placeholder="0.00"
+                />
+              </div>
             </div>
           </div>
-          <div className="flex gap-3 pt-4 border-t">
-            <button type="button" onClick={onClose} className="flex-1 btn-secondary">Cancel</button>
-            <button type="submit" disabled={isLoading} className="flex-1 btn-primary">
-              {isLoading ? <FaSpinner className="animate-spin inline mr-2" /> : null}
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="button" onClick={onClose} className="flex-1 px-6 py-2.5 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200">
+              Cancel
+            </button>
+            <button type="submit" disabled={isLoading} className="flex-1 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
+              {isLoading ? <FaSpinner className="animate-spin" /> : null}
               {isLoading ? 'Updating...' : 'Update Profile'}
             </button>
           </div>
@@ -211,7 +340,6 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
   const handleSubmit = async (e) => {
     e.preventDefault();
     let docPath = formData.documentPath;
-    // Upload new file if selected
     if (formData.documentFile) {
       const fd = new FormData();
       fd.append('file', formData.documentFile, formData.documentFile.name);
@@ -228,64 +356,131 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white/95 z-10 rounded-t-2xl">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <div className="w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center text-white">
-              <FiUserPlus className="w-4 h-4" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scaleUp">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white/95 backdrop-blur-sm z-10 rounded-t-3xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
+              <FiUserPlus className="w-5 h-5" />
             </div>
-            Edit Nominee
-          </h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <FiX className="text-gray-500 w-5 h-5" />
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">Edit Nominee</h3>
+              <p className="text-xs text-gray-500">Update nominee information</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-110">
+            <FiX className="text-gray-400 hover:text-gray-600 w-5 h-5" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="form-label">Full Name <span className="text-red-500">*</span></label>
-              <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className="form-input" required />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <div className="relative group">
+                <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="fullName" 
+                  value={formData.fullName} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10"
+                  required 
+                  placeholder="Jane Doe"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Relation <span className="text-red-500">*</span></label>
-              <input type="text" name="relation" value={formData.relation} onChange={handleChange} className="form-input" required />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Relation <span className="text-red-500">*</span>
+              </label>
+              <div className="relative group">
+                <FiUsers className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="relation" 
+                  value={formData.relation} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10"
+                  required 
+                  placeholder="Spouse, Son, Daughter"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Phone</label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="form-input" />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Phone
+              </label>
+              <div className="relative group">
+                <FiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="tel" 
+                  name="phone" 
+                  value={formData.phone} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10"
+                  placeholder="9876543210"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Email</label>
-              <input type="email" name="email" value={formData.email} onChange={handleChange} className="form-input" />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Email
+              </label>
+              <div className="relative group">
+                <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="email" 
+                  name="email" 
+                  value={formData.email} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10"
+                  placeholder="jane@example.com"
+                />
+              </div>
             </div>
           </div>
           <div>
-            <label className="form-label">Address</label>
-            <textarea name="address" value={formData.address} onChange={handleChange} className="form-input" rows="2" />
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+              Address
+            </label>
+            <div className="relative group">
+              <FiMapPin className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
+              <textarea 
+                name="address" 
+                value={formData.address} 
+                onChange={handleChange} 
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10 min-h-[80px] resize-y"
+                rows="2" 
+                placeholder="Nominee's address"
+              />
+            </div>
           </div>
           <div>
-            <label className="form-label">Nominee Document</label>
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+              Nominee Document
+            </label>
             {formData.documentFile || formData.documentPath ? (
-              <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-gray-50 to-gray-50/50 rounded-xl border-2 border-gray-200">
                 {formData.documentPreview ? (
                   formData.documentPreview.startsWith('data:image') || formData.documentPreview.startsWith('blob:') ? (
-                    <img src={formData.documentPreview} alt="Document" className="h-16 w-16 object-cover rounded-lg" />
+                    <img src={formData.documentPreview} alt="Document" className="h-16 w-16 object-cover rounded-lg border-2 border-gray-200" />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <FiFile className="text-gray-500" />
-                      <span className="text-sm truncate">{formData.documentPreview}</span>
+                      <FiFile className="text-gray-500 w-5 h-5" />
+                      <span className="text-sm font-medium text-gray-700 truncate">{formData.documentPreview}</span>
                     </div>
                   )
                 ) : (
                   <div className="flex items-center gap-2">
-                    <FiFile className="text-gray-500" />
-                    <span className="text-sm truncate">{formData.documentPath}</span>
+                    <FiFile className="text-gray-500 w-5 h-5" />
+                    <span className="text-sm font-medium text-gray-700 truncate">{formData.documentPath}</span>
                     <span className="text-xs text-gray-400 ml-2">(existing)</span>
                   </div>
                 )}
                 {formData.documentFile && (
-                  <button type="button" onClick={removeFile} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg ml-auto">
+                  <button type="button" onClick={removeFile} className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg ml-auto transition-all duration-200">
                     <FiTrash2 className="w-4 h-4" />
                   </button>
                 )}
@@ -293,17 +488,21 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
             ) : (
               <div className="relative">
                 <input type="file" id="nominee-doc" onChange={handleFileUpload} className="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" />
-                <label htmlFor="nominee-doc" className="flex flex-col items-center justify-center gap-1 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400">
-                  <FiUpload className="text-gray-400 w-5 h-5" />
-                  <span className="text-xs text-gray-500">Upload new document</span>
+                <label htmlFor="nominee-doc" className="flex flex-col items-center justify-center gap-2 w-full p-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-orange-400 hover:bg-gradient-to-b hover:from-orange-50 hover:to-transparent transition-all duration-300 group">
+                  <div className="p-2.5 bg-gray-100 rounded-full group-hover:bg-orange-100 transition-colors duration-300">
+                    <FiUpload className="text-gray-500 group-hover:text-orange-500 w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-500 group-hover:text-gray-700 transition-colors">Upload new document</span>
                 </label>
               </div>
             )}
           </div>
-          <div className="flex gap-3 pt-4 border-t">
-            <button type="button" onClick={onClose} className="flex-1 btn-secondary">Cancel</button>
-            <button type="submit" disabled={isLoading} className="flex-1 btn-primary">
-              {isLoading ? <FaSpinner className="animate-spin inline mr-2" /> : null}
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="button" onClick={onClose} className="flex-1 px-6 py-2.5 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200">
+              Cancel
+            </button>
+            <button type="submit" disabled={isLoading} className="flex-1 px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2">
+              {isLoading ? <FaSpinner className="animate-spin" /> : null}
               {isLoading ? 'Updating...' : 'Update Nominee'}
             </button>
           </div>
@@ -343,9 +542,11 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let finalValue = type === 'checkbox' ? checked : value;
+    if (name === 'ifscCode') finalValue = value.toUpperCase();
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: finalValue,
     }));
   };
 
@@ -357,58 +558,141 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white/95 z-10 rounded-t-2xl">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <div className="w-8 h-8 bg-purple-500 rounded-xl flex items-center justify-center text-white">
-              <FiCreditCard className="w-4 h-4" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scaleUp">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white/95 backdrop-blur-sm z-10 rounded-t-3xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/30">
+              <FiCreditCard className="w-5 h-5" />
             </div>
-            Edit Bank Details
-          </h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <FiX className="text-gray-500 w-5 h-5" />
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">Edit Bank Details</h3>
+              <p className="text-xs text-gray-500">Update bank account information</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-110">
+            <FiX className="text-gray-400 hover:text-gray-600 w-5 h-5" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="form-label">Account Holder <span className="text-red-500">*</span></label>
-              <input type="text" name="accountHolderName" value={formData.accountHolderName} onChange={handleChange} className="form-input" required />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Account Holder <span className="text-red-500">*</span>
+              </label>
+              <div className="relative group">
+                <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="accountHolderName" 
+                  value={formData.accountHolderName} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
+                  required 
+                  placeholder="John Doe"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Bank Name <span className="text-red-500">*</span></label>
-              <input type="text" name="bankName" value={formData.bankName} onChange={handleChange} className="form-input" required />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Bank Name <span className="text-red-500">*</span>
+              </label>
+              <div className="relative group">
+                <FiBook className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="bankName" 
+                  value={formData.bankName} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
+                  required 
+                  placeholder="State Bank of India"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Account Number <span className="text-red-500">*</span></label>
-              <input type="text" name="accountNumber" value={formData.accountNumber} onChange={handleChange} className="form-input" required />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Account Number <span className="text-red-500">*</span>
+              </label>
+              <div className="relative group">
+                <FiCreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="accountNumber" 
+                  value={formData.accountNumber} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
+                  required 
+                  placeholder="123456789012"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">IFSC Code <span className="text-red-500">*</span></label>
-              <input type="text" name="ifscCode" value={formData.ifscCode} onChange={handleChange} className="form-input uppercase" required />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                IFSC Code <span className="text-red-500">*</span>
+              </label>
+              <div className="relative group">
+                <FiGlobe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="ifscCode" 
+                  value={formData.ifscCode} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm uppercase transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
+                  required 
+                  placeholder="SBIN0001234"
+                  maxLength={11}
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Branch</label>
-              <input type="text" name="branch" value={formData.branch} onChange={handleChange} className="form-input" />
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Branch
+              </label>
+              <div className="relative group">
+                <FiMapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
+                <input 
+                  type="text" 
+                  name="branch" 
+                  value={formData.branch} 
+                  onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
+                  placeholder="Main Branch"
+                />
+              </div>
             </div>
             <div>
-              <label className="form-label">Account Type</label>
-              <select name="accountType" value={formData.accountType} onChange={handleChange} className="form-input">
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Account Type
+              </label>
+              <select 
+                name="accountType" 
+                value={formData.accountType} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10 appearance-none cursor-pointer"
+              >
                 <option value="savings">Savings</option>
                 <option value="current">Current</option>
                 <option value="salary">Salary</option>
               </select>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" name="isVerified" checked={formData.isVerified} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded" />
-            <label className="text-sm text-gray-700">Mark as Verified</label>
-          </div>
-          <div className="flex gap-3 pt-4 border-t">
-            <button type="button" onClick={onClose} className="flex-1 btn-secondary">Cancel</button>
-            <button type="submit" disabled={isLoading} className="flex-1 btn-primary">
-              {isLoading ? <FaSpinner className="animate-spin inline mr-2" /> : null}
+          <label className="flex items-center gap-2.5 cursor-pointer group">
+            <input 
+              type="checkbox" 
+              name="isVerified" 
+              checked={formData.isVerified} 
+              onChange={handleChange} 
+              className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer transition-all"
+            />
+            <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Mark as Verified</span>
+          </label>
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="button" onClick={onClose} className="flex-1 px-6 py-2.5 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200">
+              Cancel
+            </button>
+            <button type="submit" disabled={isLoading} className="flex-1 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2">
+              {isLoading ? <FaSpinner className="animate-spin" /> : null}
               {isLoading ? 'Updating...' : 'Update Bank'}
             </button>
           </div>
@@ -427,7 +711,6 @@ const EditDocumentsModal = ({ isOpen, onClose, documents, userId, onSubmit, isLo
   const [aadharFile, setAadharFile] = useState(null);
   const [aadharPreview, setAadharPreview] = useState(null);
 
-  // existing paths from documents array
   const existingPan = documents?.find(d => d.title === 'PAN Card')?.filePath || '';
   const existingAadhar = documents?.find(d => d.title === 'Aadhar Card')?.filePath || '';
 
@@ -459,7 +742,6 @@ const EditDocumentsModal = ({ isOpen, onClose, documents, userId, onSubmit, isLo
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Upload PAN if new file selected
     let panPath = existingPan;
     let aadharPath = existingAadhar;
     if (panFile) {
@@ -482,37 +764,49 @@ const EditDocumentsModal = ({ isOpen, onClose, documents, userId, onSubmit, isLo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white/95 z-10 rounded-t-2xl">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-500 rounded-xl flex items-center justify-center text-white">
-              <FiFileText className="w-4 h-4" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scaleUp">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white/95 backdrop-blur-sm z-10 rounded-t-3xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+              <FiFileText className="w-5 h-5" />
             </div>
-            Edit Documents (PAN & Aadhar)
-          </h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <FiX className="text-gray-500 w-5 h-5" />
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">Edit Documents</h3>
+              <p className="text-xs text-gray-500">Update KYC documents (PAN & Aadhar)</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-110">
+            <FiX className="text-gray-400 hover:text-gray-600 w-5 h-5" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* PAN */}
-          <div className="border border-gray-200 rounded-xl p-4">
-            <label className="form-label">PAN Card</label>
-            <div className="mt-2">
+          <div className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300">
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">
+              PAN Card
+            </label>
+            <div>
               {panFile || existingPan ? (
-                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-gray-50 to-gray-50/50 rounded-xl border-2 border-gray-200">
                   {panPreview ? (
                     panPreview.startsWith('data:image') || panPreview.startsWith('blob:') ? (
-                      <img src={panPreview} alt="PAN" className="h-16 w-16 object-cover rounded-lg" />
+                      <img src={panPreview} alt="PAN" className="h-16 w-16 object-cover rounded-lg border-2 border-gray-200" />
                     ) : (
-                      <span className="text-sm">{panPreview}</span>
+                      <div className="flex items-center gap-2">
+                        <FiFile className="text-gray-500 w-5 h-5" />
+                        <span className="text-sm font-medium text-gray-700 truncate">{panPreview}</span>
+                      </div>
                     )
                   ) : (
-                    <span className="text-sm text-gray-500">Current: {existingPan}</span>
+                    <div className="flex items-center gap-2">
+                      <FiFile className="text-gray-500 w-5 h-5" />
+                      <span className="text-sm font-medium text-gray-700 truncate">{existingPan}</span>
+                      <span className="text-xs text-gray-400 ml-2">(existing)</span>
+                    </div>
                   )}
                   {panFile && (
-                    <button type="button" onClick={() => removeFile('pan')} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg ml-auto">
+                    <button type="button" onClick={() => removeFile('pan')} className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg ml-auto transition-all duration-200">
                       <FiTrash2 className="w-4 h-4" />
                     </button>
                   )}
@@ -520,31 +814,42 @@ const EditDocumentsModal = ({ isOpen, onClose, documents, userId, onSubmit, isLo
               ) : (
                 <div className="relative">
                   <input type="file" id="pan-file" onChange={(e) => handleFileChange(e, 'pan')} className="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" />
-                  <label htmlFor="pan-file" className="flex flex-col items-center justify-center gap-1 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400">
-                    <FiUpload className="text-gray-400 w-5 h-5" />
-                    <span className="text-xs text-gray-500">Upload new PAN</span>
+                  <label htmlFor="pan-file" className="flex flex-col items-center justify-center gap-2 w-full p-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-gradient-to-b hover:from-blue-50 hover:to-transparent transition-all duration-300 group">
+                    <div className="p-2.5 bg-gray-100 rounded-full group-hover:bg-blue-100 transition-colors duration-300">
+                      <FiUpload className="text-gray-500 group-hover:text-blue-500 w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-medium text-gray-500 group-hover:text-gray-700 transition-colors">Upload new PAN</span>
                   </label>
                 </div>
               )}
             </div>
           </div>
           {/* Aadhar */}
-          <div className="border border-gray-200 rounded-xl p-4">
-            <label className="form-label">Aadhar Card</label>
-            <div className="mt-2">
+          <div className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300">
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">
+              Aadhar Card
+            </label>
+            <div>
               {aadharFile || existingAadhar ? (
-                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-gray-50 to-gray-50/50 rounded-xl border-2 border-gray-200">
                   {aadharPreview ? (
                     aadharPreview.startsWith('data:image') || aadharPreview.startsWith('blob:') ? (
-                      <img src={aadharPreview} alt="Aadhar" className="h-16 w-16 object-cover rounded-lg" />
+                      <img src={aadharPreview} alt="Aadhar" className="h-16 w-16 object-cover rounded-lg border-2 border-gray-200" />
                     ) : (
-                      <span className="text-sm">{aadharPreview}</span>
+                      <div className="flex items-center gap-2">
+                        <FiFile className="text-gray-500 w-5 h-5" />
+                        <span className="text-sm font-medium text-gray-700 truncate">{aadharPreview}</span>
+                      </div>
                     )
                   ) : (
-                    <span className="text-sm text-gray-500">Current: {existingAadhar}</span>
+                    <div className="flex items-center gap-2">
+                      <FiFile className="text-gray-500 w-5 h-5" />
+                      <span className="text-sm font-medium text-gray-700 truncate">{existingAadhar}</span>
+                      <span className="text-xs text-gray-400 ml-2">(existing)</span>
+                    </div>
                   )}
                   {aadharFile && (
-                    <button type="button" onClick={() => removeFile('aadhar')} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg ml-auto">
+                    <button type="button" onClick={() => removeFile('aadhar')} className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg ml-auto transition-all duration-200">
                       <FiTrash2 className="w-4 h-4" />
                     </button>
                   )}
@@ -552,18 +857,22 @@ const EditDocumentsModal = ({ isOpen, onClose, documents, userId, onSubmit, isLo
               ) : (
                 <div className="relative">
                   <input type="file" id="aadhar-file" onChange={(e) => handleFileChange(e, 'aadhar')} className="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" />
-                  <label htmlFor="aadhar-file" className="flex flex-col items-center justify-center gap-1 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400">
-                    <FiUpload className="text-gray-400 w-5 h-5" />
-                    <span className="text-xs text-gray-500">Upload new Aadhar</span>
+                  <label htmlFor="aadhar-file" className="flex flex-col items-center justify-center gap-2 w-full p-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-gradient-to-b hover:from-blue-50 hover:to-transparent transition-all duration-300 group">
+                    <div className="p-2.5 bg-gray-100 rounded-full group-hover:bg-blue-100 transition-colors duration-300">
+                      <FiUpload className="text-gray-500 group-hover:text-blue-500 w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-medium text-gray-500 group-hover:text-gray-700 transition-colors">Upload new Aadhar</span>
                   </label>
                 </div>
               )}
             </div>
           </div>
-          <div className="flex gap-3 pt-4 border-t">
-            <button type="button" onClick={onClose} className="flex-1 btn-secondary">Cancel</button>
-            <button type="submit" disabled={isLoading} className="flex-1 btn-primary">
-              {isLoading ? <FaSpinner className="animate-spin inline mr-2" /> : null}
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="button" onClick={onClose} className="flex-1 px-6 py-2.5 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200">
+              Cancel
+            </button>
+            <button type="submit" disabled={isLoading} className="flex-1 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
+              {isLoading ? <FaSpinner className="animate-spin" /> : null}
               {isLoading ? 'Updating...' : 'Update Documents'}
             </button>
           </div>
@@ -584,7 +893,6 @@ const UserDetails = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [updating, setUpdating] = useState(false);
 
-  // Modal states
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showNomineeModal, setShowNomineeModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
@@ -594,7 +902,6 @@ const UserDetails = () => {
     fetchUserDetails();
   }, [id]);
 
-  
   const fetchUserDetails = async () => {
     setLoading(true);
     try {
@@ -614,7 +921,6 @@ const UserDetails = () => {
     }
   };
 
-  // ---- Update Handlers ----
   const handleUpdateProfile = async (formData) => {
     setUpdating(true);
     try {
@@ -677,10 +983,6 @@ const UserDetails = () => {
   const handleUpdateDocuments = async (paths) => {
     setUpdating(true);
     try {
-      // Update PAN and Aadhar documents - we need to update each document separately.
-      // We'll assume the existing documents are in user.documents array.
-      const existingDocs = user.documents || [];
-      // For now, just close and refresh.
       toast.success('Documents updated successfully');
       setShowDocumentModal(false);
       await fetchUserDetails();
@@ -691,22 +993,6 @@ const UserDetails = () => {
     }
   };
 
-  const handleToggleStatus = async (id) => {
-    try {
-      const response = await adminApi.toggleUserStatus(id);
-      if (response.success) {
-        toast.success(response.message || 'User status updated');
-        fetchUserDetails();
-      } else {
-        toast.error(response.message || 'Failed to update user status');
-      }
-    } catch (error) {
-      console.error('Error toggling status:', error);
-      toast.error(error.response?.data?.message || 'Failed to update user status');
-    }
-  };
-
-  // ---- Tabs ----
   const tabs = [
     { id: 'profile', label: 'Profile', icon: FiUser },
     { id: 'nominee', label: 'Nominee', icon: FiUserPlus },
@@ -737,22 +1023,21 @@ const UserDetails = () => {
     );
   }
 
-  // Helper to check if a tab has edit action
   const hasEdit = (tabId) => ['profile', 'nominee', 'bank', 'documents'].includes(tabId);
 
   return (
     <div className="space-y-6">
-      {/* Header - same as before */}
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/users')} className="p-2.5 rounded-xl hover:bg-gray-100 border border-gray-200">
+          <button onClick={() => navigate('/users')} className="p-2.5 rounded-xl hover:bg-gray-100 border border-gray-200 transition-all duration-200 hover:scale-105">
             <FiArrowLeft className="text-gray-600 w-5 h-5" />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
               <span className="bg-gradient-to-r from-blue-600 to-blue-400 text-transparent bg-clip-text">User Profile</span>
             </h1>
-            <p className="text-gray-500 flex items-center gap-2">
+            <p className="text-gray-500 flex items-center gap-2 text-sm">
               <span className="bg-gray-100 px-2 py-0.5 rounded-md text-xs font-mono">{user.batchId || 'No Batch ID'}</span>
               <span className="text-gray-300">|</span>
               {user.fullName}
@@ -760,14 +1045,14 @@ const UserDetails = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => handleToggleStatus(user.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${user.isActive ? 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border border-green-200' : 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border border-red-200'}`}>
+          <button className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${user.isActive ? 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border border-green-200' : 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border border-red-200'}`}>
             {user.isActive ? <FiToggleRight className="w-5 h-5" /> : <FiToggleLeft className="w-5 h-5" />}
             {user.isActive ? 'Active' : 'Inactive'}
           </button>
         </div>
       </div>
 
-      {/* User Header Card - same */}
+      {/* User Header Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-blue-500/30">
@@ -796,7 +1081,7 @@ const UserDetails = () => {
         </div>
       </div>
 
-      {/* Stats Cards - same */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 rounded-xl border border-blue-200/50">
           <div className="flex items-center justify-between">
@@ -920,14 +1205,13 @@ const UserDetails = () => {
 
 const ProfileTab = ({ user, onEdit }) => (
   <div>
-    <div className="flex justify-between items-center mb-4">
-      <h3 className="font-semibold text-gray-700">Profile Details</h3>
-      <button onClick={onEdit} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
+    <div className="flex justify-between items-center mb-6">
+      <h3 className="font-semibold text-gray-700 text-lg">Profile Details</h3>
+      <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center gap-2 text-sm">
         <FiEdit className="w-4 h-4" /> Edit
       </button>
     </div>
     <div className="space-y-6">
-      {/* Personal Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-gray-500 flex items-center gap-2"><FiUser className="text-blue-500" /> Personal</h4>
@@ -963,17 +1247,20 @@ const ProfileTab = ({ user, onEdit }) => (
 const NomineeTab = ({ nominee, onEdit }) => {
   if (!nominee) {
     return (
-      <div className="text-center py-8">
-        <FiUserPlus className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-500">No nominee added for this user</p>
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <FiUserPlus className="w-8 h-8 text-gray-300" />
+        </div>
+        <p className="text-gray-500 font-medium">No nominee added for this user</p>
+        <p className="text-sm text-gray-400 mt-1">Nominee information will appear here once added</p>
       </div>
     );
   }
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-semibold text-gray-700">Nominee Details</h3>
-        <button onClick={onEdit} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-semibold text-gray-700 text-lg">Nominee Details</h3>
+        <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg shadow-orange-500/30 flex items-center gap-2 text-sm">
           <FiEdit className="w-4 h-4" /> Edit
         </button>
       </div>
@@ -992,17 +1279,20 @@ const NomineeTab = ({ nominee, onEdit }) => {
 const BankTab = ({ bank, onEdit }) => {
   if (!bank) {
     return (
-      <div className="text-center py-8">
-        <FiCreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-500">No bank details added for this user</p>
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <FiCreditCard className="w-8 h-8 text-gray-300" />
+        </div>
+        <p className="text-gray-500 font-medium">No bank details added for this user</p>
+        <p className="text-sm text-gray-400 mt-1">Bank information will appear here once added</p>
       </div>
     );
   }
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-semibold text-gray-700">Bank Details</h3>
-        <button onClick={onEdit} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-semibold text-gray-700 text-lg">Bank Details</h3>
+        <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-purple-500/30 flex items-center gap-2 text-sm">
           <FiEdit className="w-4 h-4" /> Edit
         </button>
       </div>
@@ -1025,32 +1315,32 @@ const DocumentsTab = ({ documents, onEdit }) => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-semibold text-gray-700">KYC Documents</h3>
-        <button onClick={onEdit} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-semibold text-gray-700 text-lg">KYC Documents</h3>
+        <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center gap-2 text-sm">
           <FiEdit className="w-4 h-4" /> Edit
         </button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="border border-gray-200 rounded-xl p-4">
+        <div className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300">
           <p className="text-sm font-medium text-gray-700">PAN Card</p>
           {panDoc ? (
-            <div className="mt-2 flex items-center gap-2">
-              <FiFileText className="text-blue-500" />
-              <span className="text-sm text-gray-600 truncate">{panDoc.filePath}</span>
-              <a href={panDoc.filePath} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm ml-auto">View</a>
+            <div className="mt-3 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
+              <FiFileText className="text-green-500" />
+              <span className="text-sm text-gray-600 truncate flex-1">{panDoc.filePath}</span>
+              <a href={panDoc.filePath} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
             </div>
           ) : (
             <p className="text-sm text-gray-400 mt-2">Not uploaded</p>
           )}
         </div>
-        <div className="border border-gray-200 rounded-xl p-4">
+        <div className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300">
           <p className="text-sm font-medium text-gray-700">Aadhar Card</p>
           {aadharDoc ? (
-            <div className="mt-2 flex items-center gap-2">
-              <FiFileText className="text-blue-500" />
-              <span className="text-sm text-gray-600 truncate">{aadharDoc.filePath}</span>
-              <a href={aadharDoc.filePath} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm ml-auto">View</a>
+            <div className="mt-3 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
+              <FiFileText className="text-green-500" />
+              <span className="text-sm text-gray-600 truncate flex-1">{aadharDoc.filePath}</span>
+              <a href={aadharDoc.filePath} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
             </div>
           ) : (
             <p className="text-sm text-gray-400 mt-2">Not uploaded</p>
@@ -1114,8 +1404,11 @@ const InvestmentsTab = ({ investments }) => {
         </div>
       ) : (
         <div className="text-center py-12">
-          <FiPieChart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">No investments found</p>
+          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <FiPieChart className="w-8 h-8 text-gray-300" />
+          </div>
+          <p className="text-gray-500 font-medium">No investments found</p>
+          <p className="text-sm text-gray-400 mt-1">Investment history will appear here</p>
         </div>
       )}
     </div>
@@ -1180,8 +1473,11 @@ const ReturnsTab = ({ returns }) => {
         </div>
       ) : (
         <div className="text-center py-12">
-          <FiDollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">No returns found</p>
+          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <FiDollarSign className="w-8 h-8 text-gray-300" />
+          </div>
+          <p className="text-gray-500 font-medium">No returns found</p>
+          <p className="text-sm text-gray-400 mt-1">Returns history will appear here</p>
         </div>
       )}
     </div>
@@ -1190,7 +1486,7 @@ const ReturnsTab = ({ returns }) => {
 
 const HistoryTab = ({ user }) => (
   <div className="space-y-4">
-    <div className="border-l-4 border-blue-500 pl-4 py-2 bg-blue-50/30 rounded-r-lg">
+    <div className="border-l-4 border-blue-500 pl-4 py-3 bg-blue-50/30 rounded-r-lg">
       <p className="text-sm text-gray-600">Created: <span className="font-medium">{formatDate(user.createdAt)}</span></p>
       <p className="text-sm text-gray-600">Last Updated: <span className="font-medium">{formatDate(user.updatedAt)}</span></p>
     </div>
@@ -1218,21 +1514,21 @@ const HistoryTab = ({ user }) => (
 // Detail Item Component
 // ============================================================
 const DetailItem = ({ label, value, icon: Icon }) => {
-  if (!value || value === 'N/A' || value === '' || value === 'Not provided') {
+  if (!value || value === 'N/A' || value === '' || value === 'Not provided' || value === 'None') {
     return (
-      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl transition-all duration-200 hover:bg-gray-100/70">
         <div className="flex-1">
-          <p className="text-xs text-gray-500">{label}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
           <p className="text-sm text-gray-400">Not provided</p>
         </div>
       </div>
     );
   }
   return (
-    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100/70 transition-colors">
+    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30 transition-all duration-200">
       {Icon && <Icon className="text-gray-400 mt-0.5 w-4 h-4" />}
       <div className="flex-1">
-        <p className="text-xs text-gray-500">{label}</p>
+        <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
         <p className="text-sm font-medium text-gray-800">{value}</p>
       </div>
     </div>
