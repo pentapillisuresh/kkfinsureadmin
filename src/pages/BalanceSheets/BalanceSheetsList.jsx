@@ -1,43 +1,146 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { balanceSheetApi } from '../../api/balanceSheetApi';
-import { userApi } from '../../api/userApi';
+import { adminApi } from '../../api/adminApi';
 import SearchBar from '../../components/common/SearchBar';
 import Pagination from '../../components/common/Pagination';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { 
-  FaDownload, 
-  FaFileInvoice, 
-  FaUser, 
-  FaTimes, 
-  FaPlus,
-  FaEdit,
-  FaTrash,
-  FaEye,
-  FaCalendarAlt,
-  FaMoneyBillWave,
-  FaChartLine
-} from 'react-icons/fa';
+import { FaSearch, FaFileInvoice, FaUser, FaTimes, FaPlus, FaEye, FaCalendarAlt, FaMoneyBillWave, FaChartLine } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
+// ---- AutocompleteInput (unchanged) ----
+const AutocompleteInput = ({
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+  required = false,
+  displayKey = 'fullName',
+  searchKeys = ['fullName', 'email', 'phone', 'batchId'],
+  error
+}) => {
+  const [inputValue, setInputValue] = useState('');
+  const [filteredOptions, setFilteredOptions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const wrapperRef = useRef(null);
+
+  const selectedOption = options?.find(opt => opt?.id === value);
+
+  useEffect(() => {
+    if (selectedOption) {
+      setInputValue(selectedOption[displayKey] || '');
+    } else {
+      setInputValue('');
+    }
+  }, [value, selectedOption]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    if (val.length > 0) {
+      const lower = val.toLowerCase();
+      const filtered = options.filter(opt =>
+        searchKeys.some(key =>
+          opt[key] && opt[key].toString().toLowerCase().includes(lower)
+        )
+      );
+      setFilteredOptions(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredOptions([]);
+      setShowDropdown(false);
+      onChange(null);
+    }
+  };
+
+  const handleSelect = (option) => {
+    setInputValue(option[displayKey] || '');
+    setShowDropdown(false);
+    onChange(option.id);
+  };
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => {
+            if (inputValue.length > 0) {
+              const lower = inputValue.toLowerCase();
+              const filtered = options.filter(opt =>
+                searchKeys.some(key =>
+                  opt[key] && opt[key].toString().toLowerCase().includes(lower)
+                )
+              );
+              setFilteredOptions(filtered);
+              setShowDropdown(true);
+            } else {
+              setFilteredOptions(options);
+              setShowDropdown(true);
+            }
+          }}
+          className={`input-field w-full ${error ? 'border-red-500' : ''}`}
+          placeholder={placeholder}
+        />
+        <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      </div>
+      {showDropdown && filteredOptions.length > 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {filteredOptions.map(opt => (
+            <div
+              key={opt.id}
+              className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
+              onClick={() => handleSelect(opt)}
+            >
+              <div className="font-medium text-gray-800">{opt.fullName}</div>
+              <div className="text-xs text-gray-500 flex gap-2 flex-wrap">
+                <span>{opt.email}</span>
+                {opt.phone && <span>· {opt.phone}</span>}
+                {opt.batchId && <span>· {opt.batchId}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+};
+
+// ---- Main Component ----
 const BalanceSheetsList = () => {
   const [sheets, setSheets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [search, setSearch] = useState('');
-  const [showModal, setShowModal] = useState(false);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedSheet, setSelectedSheet] = useState(null);
+  const [selectedSheetData, setSelectedSheetData] = useState(null);
   const [users, setUsers] = useState([]);
   const [formData, setFormData] = useState({
     userId: '',
     periodStart: '',
-    periodEnd: '',
-    totalInvestments: '',
-    totalReturns: '',
-    netWorth: '',
-    generatedAt: ''
+    periodEnd: ''
   });
-  const [editingId, setEditingId] = useState(null);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     fetchSheets();
@@ -47,7 +150,7 @@ const BalanceSheetsList = () => {
   const fetchSheets = async () => {
     setLoading(true);
     try {
-      const response = await balanceSheetApi.getAll({
+      const response = await balanceSheetApi.getAllBalanceSheet({
         page: pagination.page,
         limit: pagination.limit,
         search: search || undefined
@@ -57,6 +160,7 @@ const BalanceSheetsList = () => {
         setPagination(response.data.pagination);
       }
     } catch (error) {
+      console.error('Failed to fetch balance sheets:', error);
       toast.error('Failed to fetch balance sheets');
     } finally {
       setLoading(false);
@@ -65,9 +169,9 @@ const BalanceSheetsList = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await userApi.getAll({ limit: 1000 });
+      const response = await adminApi.getUsersDropdown();
       if (response.success) {
-        setUsers(response.data.users);
+        setUsers(response.data.users || []);
       }
     } catch (error) {
       console.error('Failed to fetch users');
@@ -79,120 +183,53 @@ const BalanceSheetsList = () => {
     fetchSheets();
   };
 
-  const handleSubmit = async (e) => {
+  const handleGenerate = async (e) => {
+
     e.preventDefault();
-    
-    // Validation
-    if (!formData.userId) {
-      toast.error('Please select a user');
+    const newErrors = {};
+    if (!formData.userId) newErrors.userId = 'Please select a user';
+    if (!formData.periodStart) newErrors.periodStart = 'Please select period start';
+    if (!formData.periodEnd) newErrors.periodEnd = 'Please select period end';
+    if (formData.periodStart && formData.periodEnd && new Date(formData.periodStart) > new Date(formData.periodEnd)) {
+      newErrors.periodEnd = 'Period end must be after period start';
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
-    if (!formData.periodStart) {
-      toast.error('Please select period start date');
-      return;
-    }
-    if (!formData.periodEnd) {
-      toast.error('Please select period end date');
-      return;
-    }
-    if (new Date(formData.periodStart) > new Date(formData.periodEnd)) {
-      toast.error('Period start cannot be after period end');
-      return;
-    }
+    setErrors({});
 
     try {
       const payload = {
         userId: formData.userId,
         periodStart: formData.periodStart,
-        periodEnd: formData.periodEnd,
-        totalInvestments: parseFloat(formData.totalInvestments) || 0,
-        totalReturns: parseFloat(formData.totalReturns) || 0,
-        netWorth: parseFloat(formData.netWorth) || 0,
-        generatedAt: formData.generatedAt || new Date().toISOString()
+        periodEnd: formData.periodEnd
       };
-
-      let response;
-      if (editingId) {
-        response = await balanceSheetApi.update(editingId, payload);
-        if (response.success) {
-          toast.success('Balance sheet updated successfully');
-        }
-      } else {
-        response = await balanceSheetApi.create(payload);
-        if (response.success) {
-          toast.success('Balance sheet created successfully');
-        }
-      }
-
+      const response = await adminApi.generateBalanceSheet(payload);
       if (response.success) {
-        setShowModal(false);
+        toast.success('Balance sheet generated successfully');
+        setShowGenerateModal(false);
         resetForm();
-        fetchSheets();
+        fetchSheets(); // refresh list
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save balance sheet');
-    }
-  };
-
-  const handleEdit = (sheet) => {
-    setEditingId(sheet.id);
-    setFormData({
-      userId: sheet.userId,
-      periodStart: sheet.periodStart ? sheet.periodStart.split('T')[0] : '',
-      periodEnd: sheet.periodEnd ? sheet.periodEnd.split('T')[0] : '',
-      totalInvestments: sheet.totalInvestments,
-      totalReturns: sheet.totalReturns,
-      netWorth: sheet.netWorth,
-      generatedAt: sheet.generatedAt ? sheet.generatedAt.split('T')[0] : ''
-    });
-    setShowModal(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this balance sheet?')) return;
-    try {
-      const response = await balanceSheetApi.delete(id);
-      if (response.success) {
-        toast.success('Balance sheet deleted successfully');
-        fetchSheets();
-      }
-    } catch (error) {
-      toast.error('Failed to delete balance sheet');
+      toast.error(error.response?.data?.message || 'Failed to generate balance sheet');
     }
   };
 
   const handleViewDetails = (sheet) => {
     setSelectedSheet(sheet);
+    // Optionally fetch full data (transactions) if the API provides it
+    // For now we just show summary from the sheet record.
+    setSelectedSheetData(sheet);
     setShowDetailsModal(true);
   };
 
   const resetForm = () => {
-    setFormData({
-      userId: '',
-      periodStart: '',
-      periodEnd: '',
-      totalInvestments: '',
-      totalReturns: '',
-      netWorth: '',
-      generatedAt: ''
-    });
-    setEditingId(null);
+    setFormData({ userId: '', periodStart: '', periodEnd: '' });
+    setErrors({});
   };
 
-  // Auto-calculate net worth
-  useEffect(() => {
-    if (formData.totalInvestments && formData.totalReturns) {
-      const investments = parseFloat(formData.totalInvestments) || 0;
-      const returns = parseFloat(formData.totalReturns) || 0;
-      const netWorth = investments + returns;
-      setFormData(prev => ({
-        ...prev,
-        netWorth: netWorth.toFixed(2)
-      }));
-    }
-  }, [formData.totalInvestments, formData.totalReturns]);
-
-  // Format currency
   const formatCurrency = (amount) => {
     return `₹${parseFloat(amount || 0).toLocaleString('en-IN', {
       minimumFractionDigits: 2,
@@ -200,18 +237,18 @@ const BalanceSheetsList = () => {
     })}`;
   };
 
-  // Render Create/Edit Modal
-  const renderModal = () => (
+  // ---- Render Generate Modal ----
+  const renderGenerateModal = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
-              {editingId ? 'Edit Balance Sheet' : 'Create Balance Sheet'}
+              Generate Balance Sheet
             </h3>
             <button
               onClick={() => {
-                setShowModal(false);
+                setShowGenerateModal(false);
                 resetForm();
               }}
               className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
@@ -221,117 +258,52 @@ const BalanceSheetsList = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                User <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.userId}
-                onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                className="input-field w-full"
-                required
-              >
-                <option value="">Select User</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.fullName} ({user.email})
-                  </option>
-                ))}
-              </select>
-            </div>
+        <form onSubmit={handleGenerate} className="p-6 space-y-4">
+          <div>
+            <AutocompleteInput
+              label="User"
+              placeholder="Type to search user..."
+              options={users}
+              value={formData.userId}
+              onChange={(id) => setFormData({ ...formData, userId: id })}
+              required
+              error={errors.userId}
+            />
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Generated At
-              </label>
-              <input
-                type="datetime-local"
-                value={formData.generatedAt}
-                onChange={(e) => setFormData({ ...formData, generatedAt: e.target.value })}
-                className="input-field w-full"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Period Start <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={formData.periodStart}
+              onChange={(e) => setFormData({ ...formData, periodStart: e.target.value })}
+              className={`input-field w-full ${errors.periodStart ? 'border-red-500' : ''}`}
+              required
+            />
+            {errors.periodStart && <p className="mt-1 text-xs text-red-600">{errors.periodStart}</p>}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Period Start <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.periodStart}
-                onChange={(e) => setFormData({ ...formData, periodStart: e.target.value })}
-                className="input-field w-full"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Period End <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.periodEnd}
-                onChange={(e) => setFormData({ ...formData, periodEnd: e.target.value })}
-                className="input-field w-full"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Total Investments (₹)
-              </label>
-              <input
-                type="number"
-                value={formData.totalInvestments}
-                onChange={(e) => setFormData({ ...formData, totalInvestments: e.target.value })}
-                className="input-field w-full"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Total Returns (₹)
-              </label>
-              <input
-                type="number"
-                value={formData.totalReturns}
-                onChange={(e) => setFormData({ ...formData, totalReturns: e.target.value })}
-                className="input-field w-full"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Net Worth (₹) <span className="text-blue-500">(Auto-calculated)</span>
-              </label>
-              <input
-                type="number"
-                value={formData.netWorth}
-                className="input-field w-full bg-gray-50"
-                placeholder="Auto-calculated from investments + returns"
-                disabled
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Net Worth = Total Investments + Total Returns
-              </p>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Period End <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={formData.periodEnd}
+              onChange={(e) => setFormData({ ...formData, periodEnd: e.target.value })}
+              className={`input-field w-full ${errors.periodEnd ? 'border-red-500' : ''}`}
+              required
+            />
+            {errors.periodEnd && <p className="mt-1 text-xs text-red-600">{errors.periodEnd}</p>}
           </div>
 
           <div className="border-t border-gray-200 pt-4 flex gap-3">
             <button
               type="button"
               onClick={() => {
-                setShowModal(false);
+                setShowGenerateModal(false);
                 resetForm();
               }}
               className="flex-1 btn-secondary"
@@ -339,7 +311,7 @@ const BalanceSheetsList = () => {
               Cancel
             </button>
             <button type="submit" className="flex-1 btn-primary">
-              {editingId ? 'Update Balance Sheet' : 'Create Balance Sheet'}
+              Generate
             </button>
           </div>
         </form>
@@ -347,12 +319,12 @@ const BalanceSheetsList = () => {
     </div>
   );
 
-  // Render Details Modal
+  // ---- Render Details Modal ----
   const renderDetailsModal = () => {
     if (!selectedSheet) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
           <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
@@ -378,7 +350,7 @@ const BalanceSheetsList = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">User</p>
-                <p className="font-medium text-gray-900">{selectedSheet.user?.fullName}</p>
+                <p className="font-medium text-gray-900">{selectedSheet.user?.fullName || 'N/A'}</p>
                 <p className="text-sm text-gray-500">{selectedSheet.user?.email}</p>
               </div>
             </div>
@@ -440,7 +412,7 @@ const BalanceSheetsList = () => {
               </div>
             </div>
 
-            {/* Generated Info */}
+            {/* Generated At */}
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-500">Generated At</p>
               <p className="font-medium text-gray-900">
@@ -453,6 +425,37 @@ const BalanceSheetsList = () => {
                 })}
               </p>
             </div>
+
+            {/* Optional: transactions if available */}
+            {selectedSheetData?.transactions && selectedSheetData.transactions.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-3">Transaction Statement</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Date</th>
+                        <th className="px-3 py-2 text-left">Description</th>
+                        <th className="px-3 py-2 text-right">Amount</th>
+                        <th className="px-3 py-2 text-right">Balance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedSheetData.transactions.map((tx, idx) => (
+                        <tr key={idx} className="border-b border-gray-100">
+                          <td className="px-3 py-2 text-gray-600">{tx.formattedDate}</td>
+                          <td className="px-3 py-2">{tx.description}</td>
+                          <td className={`px-3 py-2 text-right font-medium ${tx.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {tx.amount < 0 ? '-' : '+'}{formatCurrency(Math.abs(tx.amount))}
+                          </td>
+                          <td className="px-3 py-2 text-right font-medium">{formatCurrency(tx.balance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -466,11 +469,11 @@ const BalanceSheetsList = () => {
         <button
           onClick={() => {
             resetForm();
-            setShowModal(true);
+            setShowGenerateModal(true);
           }}
           className="btn-primary flex items-center gap-2"
         >
-          <FaPlus /> Create Balance Sheet
+          <FaPlus /> Generate Balance Sheet
         </button>
       </div>
 
@@ -522,14 +525,7 @@ const BalanceSheetsList = () => {
                       <div className="flex items-center gap-1">
                         <FaCalendarAlt className="text-gray-400 text-xs" />
                         <span>
-                          {new Date(sheet.periodStart).toLocaleDateString('en-IN', { 
-                            day: '2-digit', 
-                            month: 'short' 
-                          })} - {new Date(sheet.periodEnd).toLocaleDateString('en-IN', { 
-                            day: '2-digit', 
-                            month: 'short',
-                            year: 'numeric'
-                          })}
+                          {new Date(sheet.periodStart).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} - {new Date(sheet.periodEnd).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                       </div>
                     </td>
@@ -550,29 +546,13 @@ const BalanceSheetsList = () => {
                       })}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleViewDetails(sheet)}
-                          className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors"
-                          title="View Details"
-                        >
-                          <FaEye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(sheet)}
-                          className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <FaEdit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(sheet.id)}
-                          className="text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <FaTrash className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleViewDetails(sheet)}
+                        className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors"
+                        title="View Details"
+                      >
+                        <FaEye className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -590,8 +570,7 @@ const BalanceSheetsList = () => {
         />
       )}
 
-      {/* Modals */}
-      {showModal && renderModal()}
+      {showGenerateModal && renderGenerateModal()}
       {showDetailsModal && renderDetailsModal()}
     </div>
   );

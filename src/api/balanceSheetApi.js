@@ -17,10 +17,16 @@ export const balanceSheetApi = {
     return response.data;
   },
 
-  getAllBalanceSheet: async (id) => {
-    const response = await apiClient.get(`/admin/balance-sheets/all`);
+  getAllBalanceSheet : async ({ page = 1 }) => {
+    const response = await apiClient.get('/admin/balance-sheets/all', {
+      params: {
+        page,
+      },
+    });
+
     return response.data;
   },
+
 
   // READ (By User - Admin)
   getUserBalanceSheets: async (userId, params) => {

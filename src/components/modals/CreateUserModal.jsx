@@ -1,5 +1,5 @@
 // src/components/modals/CreateUserModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import {
   FiX, FiUser, FiMail, FiPhone, FiCalendar,
   FiMapPin, FiCreditCard, FiLock, FiUserPlus,
@@ -7,12 +7,134 @@ import {
   FiUpload, FiFile, FiTrash2, FiAlertCircle,
   FiDollarSign, FiHash, FiBook, FiGlobe
 } from 'react-icons/fi';
+import {FaSearch } from 'react-icons/fa';
+
 import { FaSpinner } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { authApi } from '../../api/authApi';
 import { nomineeApi } from '../../api/nomineeApi';
 import { filesAPI } from '../../api/files';
 import { documentApi } from '../../api/documentApi';
+import { adminApi } from '../../api/adminApi';
+
+
+const AutocompleteInput = ({
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+  required = false,
+  displayKey = 'fullName',
+  searchKeys = ['fullName', 'email', 'phone', 'batchId'],
+  error
+}) => {
+  const [inputValue, setInputValue] = useState('');
+  const [filteredOptions, setFilteredOptions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const wrapperRef = useRef(null);
+
+  // Find selected option to display its label
+  const selectedOption = options?.find(opt => opt?.id === value);
+
+  useEffect(() => {
+    if (selectedOption) {
+      setInputValue(selectedOption[displayKey] || '');
+    } else {
+      setInputValue('');
+    }
+  }, [value, selectedOption]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    if (val.length > 0) {
+      const lower = val.toLowerCase();
+      const filtered = options.filter(opt =>
+        searchKeys.some(key =>
+          opt[key] && opt[key].toString().toLowerCase().includes(lower)
+        )
+      );
+      setFilteredOptions(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredOptions([]);
+      setShowDropdown(false);
+      // Clear selection if input cleared
+      onChange(null);
+    }
+  };
+
+  const handleSelect = (option) => {
+    setInputValue(option[displayKey] || '');
+    setShowDropdown(false);
+    onChange(option.id);
+  };
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => {
+            if (inputValue.length > 0) {
+              const lower = inputValue.toLowerCase();
+              const filtered = options.filter(opt =>
+                searchKeys.some(key =>
+                  opt[key] && opt[key].toString().toLowerCase().includes(lower)
+                )
+              );
+              setFilteredOptions(filtered);
+              setShowDropdown(true);
+            } else {
+              setFilteredOptions(options);
+              setShowDropdown(true);
+            }
+          }}
+          className={`input-field w-full ${error ? 'border-red-500' : ''}`}
+          placeholder={placeholder}
+        />
+        <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      </div>
+      {showDropdown && filteredOptions.length > 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {filteredOptions.map(opt => (
+            <div
+              key={opt.id}
+              className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
+              onClick={() => handleSelect(opt)}
+            >
+              <div className="font-medium text-gray-800">{opt.fullName}</div>
+              <div className="text-xs text-gray-500 flex gap-2 flex-wrap">
+                <span>{opt.email}</span>
+                {opt.phone && <span>· {opt.phone}</span>}
+                {opt.batchId && <span>· {opt.batchId}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+};
 
 // ---- Validation Patterns ----
 const PATTERNS = {
@@ -28,6 +150,8 @@ const CreateUserModal = ({ isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [stepErrors, setStepErrors] = useState({});
+  const [isReferred, setIsReferred] = useState(false);
+  const [users, setUsers] = useState([]);
 
   // ---- Form State ----
   const [userData, setUserData] = useState({
@@ -38,6 +162,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     dateOfBirth: '',
     pan: '',
     aadhar: '',
+    referrerId: '',
     address: '',
     isSeniorCitizen: false
   });
@@ -48,7 +173,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     phone: '',
     email: '',
     address: '',
-    aadhar:'',
+    aadhar: '',
     documentFile: null,
     documentPreview: null
   });
@@ -69,6 +194,20 @@ const CreateUserModal = ({ isOpen, onClose }) => {
     aadharFile: null,
     aadharPreview: null
   });
+
+  useEffect(() => {
+    fetchUsers();
+  }, [])
+  const fetchUsers = async () => {
+    try {
+      const response = await adminApi.getUsersDropdown();
+      if (response.success) {
+        setUsers(response.data.users || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users');
+    }
+  };
 
   // ---- Step Configuration ----
   const steps = [
@@ -185,7 +324,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
         break;
       }
       case 2: {
-        const { fullName, relation, phone, email,aadhar } = nomineeData;
+        const { fullName, relation, phone, email, aadhar } = nomineeData;
         if (fullName && !relation) errors.nominee_relation = 'Relationship is required when nominee name is provided';
         if (fullName && phone && !PATTERNS.phone.test(phone)) errors.nominee_phone = 'Phone must be 10 digits';
         if (fullName && email && !PATTERNS.email.test(email)) errors.nominee_email = 'Enter a valid email address';
@@ -241,7 +380,8 @@ const CreateUserModal = ({ isOpen, onClose }) => {
         pan: userData.pan || undefined,
         aadhar: userData.aadhar || undefined,
         address: userData.address || undefined,
-        isSeniorCitizen: userData.isSeniorCitizen
+        isSeniorCitizen: userData.isSeniorCitizen,
+        referrerId: isReferred ? userData.referrerId : null
       };
       const userResponse = await authApi.createUser(userPayload);
       if (!userResponse.success) throw new Error(userResponse.message);
@@ -311,9 +451,9 @@ const CreateUserModal = ({ isOpen, onClose }) => {
       onClose();
       // Reset state
       setUserData({
-        email: '', password: '', fullName: '', phone: '', dateOfBirth: '', pan: '', aadhar: '', address: '', isSeniorCitizen: false
+        email: '', password: '', fullName: '', phone: '', dateOfBirth: '', pan: '', aadhar: '', address: '', isSeniorCitizen: false, referrerId: null
       });
-      setNomineeData({ fullName: '', relation: '', phone: '', email: '' , aadhar:'', address: '', documentFile: null, documentPreview: null });
+      setNomineeData({ fullName: '', relation: '', phone: '', email: '', aadhar: '', address: '', documentFile: null, documentPreview: null });
       setBankData({ accountHolderName: '', bankName: '', accountNumber: '', ifscCode: '', branch: '', accountType: 'savings', isVerified: false });
       setDocuments({ panFile: null, panPreview: null, aadharFile: null, aadharPreview: null });
       setCurrentStep(1);
@@ -344,13 +484,13 @@ const CreateUserModal = ({ isOpen, onClose }) => {
   const renderPersonalDetails = () => (
     <div className="space-y-4">
       {/* Error banner at top */}
-      {Object.keys(stepErrors).some(k => ['fullName','email','password','phone','pan','aadhar'].includes(k)) && (
+      {Object.keys(stepErrors).some(k => ['fullName', 'email', 'password', 'phone', 'pan', 'aadhar'].includes(k)) && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2">
           <FiAlertCircle className="text-red-500 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-red-700">
             <p className="font-semibold">Please fix the following errors:</p>
             <ul className="list-disc list-inside text-xs">
-              {Object.entries(stepErrors).filter(([key]) => ['fullName','email','password','phone','pan','aadhar'].includes(key)).map(([key, msg]) => (
+              {Object.entries(stepErrors).filter(([key]) => ['fullName', 'email', 'password', 'phone', 'pan', 'aadhar'].includes(key)).map(([key, msg]) => (
                 <li key={key}>{msg}</li>
               ))}
             </ul>
@@ -410,6 +550,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
             <input
               type="tel"
               name="phone"
+              maxLength={10}
               value={userData.phone}
               onChange={handleUserChange}
               className={`form-input pl-10 ${stepErrors.phone ? 'border-red-500' : ''}`}
@@ -472,6 +613,27 @@ const CreateUserModal = ({ isOpen, onClose }) => {
           />
           <label htmlFor="isSeniorCitizen" className="text-sm text-gray-700">Senior Citizen</label>
         </div>
+        <div className="flex items-center gap-2 pt-2">
+          <input
+            type="checkbox"
+            id="isreferred"
+            name="isreferred"
+            checked={isReferred}
+            onChange={() => { setIsReferred(!isReferred) }}
+            className="w-4 h-4 text-blue-600 rounded border-gray-300"
+          />
+          <label htmlFor="isreferred" className="text-sm text-gray-700">Is Referrer</label>
+        </div>
+
+       {isReferred && <div>
+          <AutocompleteInput
+            label="Referrer"
+            placeholder="Type to search referrer..."
+            options={users}
+            value={userData.referrerId}
+            onChange={(id) => setUserData({ ...userData, referrerId: id })}
+          />
+        </div>}
       </div>
       <div>
         <label className="form-label">Address</label>
@@ -536,6 +698,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
             <input
               type="tel"
               name="phone"
+              maxLength={10}
               value={nomineeData.phone}
               onChange={handleNomineeChange}
               className={`form-input pl-10 ${stepErrors.nominee_phone ? 'border-red-500' : ''}`}

@@ -1,13 +1,134 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { referralApi } from '../../api/referralApi';
 import { userApi } from '../../api/userApi';
 import { offerApi } from '../../api/offerApi';
 import SearchBar from '../../components/common/SearchBar';
 import Pagination from '../../components/common/Pagination';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { FaPlus, FaEye, FaTrash, FaTimes, FaUserPlus, FaGift } from 'react-icons/fa';
+import { FaPlus, FaEye, FaTrash, FaTimes, FaUserPlus, FaGift, FaSearch } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import { adminApi } from '../../api/adminApi';
 
+// ---- Autocomplete Input Component ----
+const AutocompleteInput = ({
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+  required = false,
+  displayKey = 'fullName',
+  searchKeys = ['fullName', 'email', 'phone', 'batchId'],
+  error
+}) => {
+  const [inputValue, setInputValue] = useState('');
+  const [filteredOptions, setFilteredOptions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const wrapperRef = useRef(null);
+
+  // Find selected option to display its label
+  const selectedOption = options?.find(opt => opt?.id === value);
+
+  useEffect(() => {
+    if (selectedOption) {
+      setInputValue(selectedOption[displayKey] || '');
+    } else {
+      setInputValue('');
+    }
+  }, [value, selectedOption]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    if (val.length > 0) {
+      const lower = val.toLowerCase();
+      const filtered = options.filter(opt =>
+        searchKeys.some(key =>
+          opt[key] && opt[key].toString().toLowerCase().includes(lower)
+        )
+      );
+      setFilteredOptions(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredOptions([]);
+      setShowDropdown(false);
+      // Clear selection if input cleared
+      onChange(null);
+    }
+  };
+
+  const handleSelect = (option) => {
+    setInputValue(option[displayKey] || '');
+    setShowDropdown(false);
+    onChange(option.id);
+  };
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => {
+            if (inputValue.length > 0) {
+              const lower = inputValue.toLowerCase();
+              const filtered = options.filter(opt =>
+                searchKeys.some(key =>
+                  opt[key] && opt[key].toString().toLowerCase().includes(lower)
+                )
+              );
+              setFilteredOptions(filtered);
+              setShowDropdown(true);
+            } else {
+              setFilteredOptions(options);
+              setShowDropdown(true);
+            }
+          }}
+          className={`input-field w-full ${error ? 'border-red-500' : ''}`}
+          placeholder={placeholder}
+        />
+        <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      </div>
+      {showDropdown && filteredOptions.length > 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {filteredOptions.map(opt => (
+            <div
+              key={opt.id}
+              className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
+              onClick={() => handleSelect(opt)}
+            >
+              <div className="font-medium text-gray-800">{opt.fullName}</div>
+              <div className="text-xs text-gray-500 flex gap-2 flex-wrap">
+                <span>{opt.email}</span>
+                {opt.phone && <span>· {opt.phone}</span>}
+                {opt.batchId && <span>· {opt.batchId}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+};
+
+// ---- Main Component ----
 const ReferralsList = () => {
   const [referrals, setReferrals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,20 +139,21 @@ const ReferralsList = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [users, setUsers] = useState([]);
   const [offers, setOffers] = useState([]);
+  const [filteredOffers, setFilteredOffers] = useState([]);
   const [formData, setFormData] = useState({
     referrerId: '',
     referredUserId: '',
     investmentAmount: '',
     rewardPoints: 0,
-    rewardType: 'points',
     rewardValue: '',
     offerId: ''
   });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     fetchReferrals();
     fetchUsers();
-    fetchActiveOffers();
+    fetchAllOffers();
   }, [pagination.page, search]);
 
   const fetchReferrals = async () => {
@@ -55,54 +177,87 @@ const ReferralsList = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await userApi.getAll({ limit: 100 });
+      const response = await adminApi.getUsersDropdown();
       if (response.success) {
-        setUsers(response.data.users);
+        setUsers(response.data.users || []);
       }
     } catch (error) {
       console.error('Failed to fetch users');
     }
   };
 
-  const fetchActiveOffers = async () => {
+  const fetchAllOffers = async () => {
     try {
       const response = await offerApi.getAll({ isActive: true, limit: 100 });
       if (response.success) {
-        setOffers(response.data.offers);
+        setOffers(response.data.offers || []);
       }
     } catch (error) {
       console.error('Failed to fetch offers');
     }
   };
 
+  // Filter offers when investment amount changes
+  useEffect(() => {
+    const amount = parseFloat(formData.investmentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setFilteredOffers([]);
+      return;
+    }
+    const now = new Date();
+    const applicable = offers.filter(o => {
+      const conditions = o.conditions || {};
+      // Check minInvestment
+      if (conditions.minInvestment && amount < conditions.minInvestment) return false;
+      // Check expiry
+      if (conditions.expiryDate && new Date(conditions.expiryDate) < now) return false;
+      return true;
+    });
+    setFilteredOffers(applicable);
+  }, [formData.investmentAmount, offers]);
+
+  // Compute rewardValue and rewardPoints when investmentAmount changes
+  useEffect(() => {
+    const amount = parseFloat(formData.investmentAmount);
+    if (!isNaN(amount) && amount > 0) {
+      const computed = amount / 100;
+      setFormData(prev => ({
+        ...prev,
+        rewardValue: computed.toFixed(2),
+        rewardPoints: Math.round(computed)
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        rewardValue: '',
+        rewardPoints: 0
+      }));
+    }
+  }, [formData.investmentAmount]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validation
-    if (!formData.referrerId || !formData.referredUserId) {
-      toast.error('Please select both referrer and referred user');
-      return;
-    }
+    const newErrors = {};
+    if (!formData.referrerId) newErrors.referrerId = 'Please select a referrer';
+    if (!formData.referredUserId) newErrors.referredUserId = 'Please select a referred user';
     if (formData.referrerId === formData.referredUserId) {
-      toast.error('Referrer and referred user cannot be the same');
+      newErrors.referredUserId = 'Referrer and referred user cannot be the same';
+    }
+    if (!formData.investmentAmount || parseFloat(formData.investmentAmount) <= 0) {
+      newErrors.investmentAmount = 'Please enter a valid investment amount';
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
-    if (!formData.rewardType) {
-      toast.error('Please select reward type');
-      return;
-    }
-    if (!formData.rewardValue) {
-      toast.error('Please enter reward value');
-      return;
-    }
+    setErrors({});
 
     try {
       const payload = {
         referrerId: formData.referrerId,
         referredUserId: formData.referredUserId,
-        investmentAmount: parseFloat(formData.investmentAmount) || 0,
-        rewardPoints: parseInt(formData.rewardPoints) || 0,
-        rewardType: formData.rewardType,
+        investmentAmount: parseFloat(formData.investmentAmount),
+        rewardPoints: formData.rewardPoints,
         rewardValue: formData.rewardValue,
         offerId: formData.offerId || null
       };
@@ -138,24 +293,16 @@ const ReferralsList = () => {
       referredUserId: '',
       investmentAmount: '',
       rewardPoints: 0,
-      rewardType: 'points',
       rewardValue: '',
       offerId: ''
     });
+    setFilteredOffers([]);
+    setErrors({});
   };
 
   const handleSearch = () => {
     setPagination({ ...pagination, page: 1 });
     fetchReferrals();
-  };
-
-  const getRewardTypeColor = (type) => {
-    const colors = {
-      'voucher': 'bg-purple-100 text-purple-800',
-      'points': 'bg-blue-100 text-blue-800',
-      'cashback': 'bg-green-100 text-green-800'
-    };
-    return colors[type] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -230,22 +377,19 @@ const ReferralsList = () => {
                       <div className="text-xs text-gray-500">{ref.referredUser?.email}</div>
                     </td>
                     <td className="py-3 px-4 text-sm">
-                      {ref.investmentAmount ? 
-                        `₹${parseFloat(ref.investmentAmount).toLocaleString()}` : 
+                      {ref.investmentAmount ?
+                        `₹${parseFloat(ref.investmentAmount).toLocaleString()}` :
                         'N/A'
                       }
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col gap-1">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getRewardTypeColor(ref.rewardType)}`}>
-                          {ref.rewardType}
-                        </span>
-                        <span className="text-sm font-medium">
-                          {ref.rewardType === 'points' && `${ref.rewardPoints} pts`}
-                          {ref.rewardType === 'voucher' && ref.rewardValue}
-                          {ref.rewardType === 'cashback' && `₹${ref.rewardValue}`}
-                        </span>
-                      </div>
+                    <td className="py-3 px-4 text-sm">
+                      {ref.offer ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs truncate max-w-[100px]">{ref.rewardPoints}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">No offer</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-sm">
                       {ref.offer ? (
@@ -318,105 +462,48 @@ const ReferralsList = () => {
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Referrer <span className="text-red-500">*</span>
-                  </label>
-                  <select
+                  <AutocompleteInput
+                    label="Referrer"
+                    placeholder="Type to search referrer..."
+                    options={users}
                     value={formData.referrerId}
-                    onChange={(e) => setFormData({ ...formData, referrerId: e.target.value })}
-                    className="input-field w-full"
+                    onChange={(id) => setFormData({ ...formData, referrerId: id })}
                     required
-                  >
-                    <option value="">Select Referrer</option>
-                    {users.map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.fullName} ({user.email})
-                      </option>
-                    ))}
-                  </select>
+                    error={errors.referrerId}
+                  />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Referred User <span className="text-red-500">*</span>
-                  </label>
-                  <select
+                  <AutocompleteInput
+                    label="Referred User"
+                    placeholder="Type to search referred user..."
+                    options={users}
                     value={formData.referredUserId}
-                    onChange={(e) => setFormData({ ...formData, referredUserId: e.target.value })}
-                    className="input-field w-full"
+                    onChange={(id) => setFormData({ ...formData, referredUserId: id })}
                     required
-                  >
-                    <option value="">Select Referred User</option>
-                    {users.map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.fullName} ({user.email})
-                      </option>
-                    ))}
-                  </select>
+                    error={errors.referredUserId}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Investment Amount (₹)
+                    Investment Amount (₹) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     value={formData.investmentAmount}
                     onChange={(e) => setFormData({ ...formData, investmentAmount: e.target.value })}
-                    className="input-field w-full"
+                    className={`input-field w-full ${errors.investmentAmount ? 'border-red-500' : ''}`}
                     placeholder="e.g., 50000"
                     min="0"
                     step="1000"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Reward Points
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.rewardPoints}
-                    onChange={(e) => setFormData({ ...formData, rewardPoints: parseInt(e.target.value) || 0 })}
-                    className="input-field w-full"
-                    placeholder="e.g., 100"
-                    min="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Reward Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.rewardType}
-                    onChange={(e) => setFormData({ ...formData, rewardType: e.target.value })}
-                    className="input-field w-full"
-                    required
-                  >
-                    <option value="points">Points</option>
-                    <option value="voucher">Voucher</option>
-                    <option value="cashback">Cashback</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Reward Value <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.rewardValue}
-                    onChange={(e) => setFormData({ ...formData, rewardValue: e.target.value })}
-                    className="input-field w-full"
-                    placeholder={formData.rewardType === 'cashback' ? '500' : 
-                               formData.rewardType === 'voucher' ? 'Amazon voucher' : 
-                               'e.g., 100'}
                     required
                   />
+                  {errors.investmentAmount && (
+                    <p className="mt-1 text-xs text-red-600">{errors.investmentAmount}</p>
+                  )}
                 </div>
 
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Applied Offer (Optional)
                   </label>
@@ -426,12 +513,41 @@ const ReferralsList = () => {
                     className="input-field w-full"
                   >
                     <option value="">No Offer</option>
-                    {offers.map(offer => (
+                    {filteredOffers.map(offer => (
                       <option key={offer.id} value={offer.id}>
                         {offer.title} - {offer.rewardType}
                       </option>
                     ))}
                   </select>
+                  {filteredOffers.length === 0 && formData.investmentAmount && (
+                    <p className="mt-1 text-xs text-gray-500">No offers match this investment amount</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Computed Reward Fields (read-only) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Reward Value (Auto-computed)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.rewardValue || '0'}
+                    readOnly
+                    className="input-field w-full bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Reward Points (Auto-computed)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.rewardPoints || 0}
+                    readOnly
+                    className="input-field w-full bg-gray-100"
+                  />
                 </div>
               </div>
 
@@ -458,7 +574,7 @@ const ReferralsList = () => {
         </div>
       )}
 
-      {/* Referral Details Modal */}
+      {/* Referral Details Modal - unchanged */}
       {showDetails && selectedReferral && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md">
@@ -496,8 +612,8 @@ const ReferralsList = () => {
                   <div>
                     <p className="text-sm text-gray-500">Investment Amount</p>
                     <p className="font-medium text-gray-900">
-                      {selectedReferral.investmentAmount ? 
-                        `₹${parseFloat(selectedReferral.investmentAmount).toLocaleString()}` : 
+                      {selectedReferral.investmentAmount ?
+                        `₹${parseFloat(selectedReferral.investmentAmount).toLocaleString()}` :
                         'N/A'
                       }
                     </p>
@@ -506,19 +622,6 @@ const ReferralsList = () => {
                     <p className="text-sm text-gray-500">Reward Points</p>
                     <p className="font-medium text-gray-900">{selectedReferral.rewardPoints || 0}</p>
                   </div>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm text-gray-500">Reward</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${getRewardTypeColor(selectedReferral.rewardType)}`}>
-                    {selectedReferral.rewardType}
-                  </span>
-                  <span className="font-medium">
-                    {selectedReferral.rewardType === 'cashback' && '₹'}
-                    {selectedReferral.rewardValue}
-                  </span>
                 </div>
               </div>
 

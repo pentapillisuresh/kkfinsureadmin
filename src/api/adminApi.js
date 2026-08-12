@@ -14,6 +14,11 @@ export const adminApi = {
     return response.data;
   },
   
+  getUsersDropdown: async () => {
+    const response = await apiClient.get('/admin/usersForDropdown');
+    return response.data;
+  },
+  
   getUser: async (id) => {
     const response = await apiClient.get(`/admin/users/${id}`);
     return response.data;

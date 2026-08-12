@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { returnApi } from '../../api/returnApi';
 import { commissionApi } from '../../api/commissionApi';
 import { userApi } from '../../api/userApi';
@@ -8,30 +8,160 @@ import SearchBar from '../../components/common/SearchBar';
 import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { 
-  FaCheckCircle, 
-  FaMoneyBillWave, 
-  FaTimes, 
-  FaWallet, 
-  FaHandshake,
-  FaCalendarCheck,
-  FaFileInvoice,
-  FaPlus,
-  FaEdit,
-  FaTrash,
-  FaEye
-} from 'react-icons/fa';
+import { FaCheckCircle, FaMoneyBillWave, FaTimes, FaWallet, FaHandshake, FaCalendarCheck, FaFileInvoice, FaPlus, FaEdit, FaTrash, FaEye, FaSearch} from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import { adminApi } from '../../api/adminApi';
 
+// ---- AutocompleteInput Component (unchanged) ----
+const AutocompleteInput = ({
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+  required = false,
+  displayKey = 'fullName',
+  searchKeys = ['fullName', 'email', 'phone', 'batchId'],
+  error
+}) => {
+  const [inputValue, setInputValue] = useState('');
+  const [filteredOptions, setFilteredOptions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const wrapperRef = useRef(null);
+
+  const selectedOption = options?.find(opt => opt?.id === value);
+
+  useEffect(() => {
+    if (selectedOption) {
+      setInputValue(selectedOption[displayKey] || '');
+    } else {
+      setInputValue('');
+    }
+  }, [value, selectedOption]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    if (val.length > 0) {
+      const lower = val.toLowerCase();
+      const filtered = options.filter(opt =>
+        searchKeys.some(key =>
+          opt[key] && opt[key].toString().toLowerCase().includes(lower)
+        )
+      );
+      setFilteredOptions(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredOptions([]);
+      setShowDropdown(false);
+      onChange(null);
+    }
+  };
+
+  const handleSelect = (option) => {
+    setInputValue(option[displayKey] || '');
+    setShowDropdown(false);
+    onChange(option.id);
+  };
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => {
+            if (inputValue.length > 0) {
+              const lower = inputValue.toLowerCase();
+              const filtered = options.filter(opt =>
+                searchKeys.some(key =>
+                  opt[key] && opt[key].toString().toLowerCase().includes(lower)
+                )
+              );
+              setFilteredOptions(filtered);
+              setShowDropdown(true);
+            } else {
+              setFilteredOptions(options);
+              setShowDropdown(true);
+            }
+          }}
+          className={`input-field w-full ${error ? 'border-red-500' : ''}`}
+          placeholder={placeholder}
+        />
+        <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      </div>
+      {showDropdown && filteredOptions.length > 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {filteredOptions.map(opt => (
+            <div
+              key={opt.id}
+              className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
+              onClick={() => handleSelect(opt)}
+            >
+              <div className="font-medium text-gray-800">{opt.fullName}</div>
+              <div className="text-xs text-gray-500 flex gap-2 flex-wrap">
+                <span>{opt.email}</span>
+                {opt.phone && <span>· {opt.phone}</span>}
+                {opt.batchId && <span>· {opt.batchId}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+};
+
+// ============================================================
+// Main Component
+// ============================================================
 const ReturnsAndCommissions = () => {
-  const [activeTab, setActiveTab] = useState('returns');
+  // --- Tab State ---
+  const TAB_ALL_RETURNS = 'all-returns';
+  const TAB_PENDING_RETURNS = 'pending-returns';
+  const TAB_ALL_COMMISSIONS = 'all-commissions';
+  const TAB_PENDING_COMMISSIONS = 'pending-commissions';
+
+  const [activeTab, setActiveTab] = useState(TAB_ALL_RETURNS);
   const [loading, setLoading] = useState(true);
-  
-  // Returns state
+
+  // ---- Shared state for users, investments, offers, partners ----
+  const [users, setUsers] = useState([]);
+  const [allInvestments, setAllInvestments] = useState([]);
+  const [offers, setOffers] = useState([]);
+  const [partners, setPartners] = useState([]);
+  const [filteredInvestments, setFilteredInvestments] = useState([]);
+
+  // ---- Returns state (shared between all-returns and pending-returns) ----
   const [returns, setReturns] = useState([]);
   const [returnPagination, setReturnPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [returnSearch, setReturnSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+
+  // ---- Commissions state (shared between all-commissions and pending-commissions) ----
+  const [commissions, setCommissions] = useState([]);
+  const [commissionPagination, setCommissionPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
+  const [commissionSearch, setCommissionSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // ---- Modals ----
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [editingReturn, setEditingReturn] = useState(null);
   const [returnFormData, setReturnFormData] = useState({
@@ -44,15 +174,9 @@ const ReturnsAndCommissions = () => {
     description: '',
     paidOn: ''
   });
-  const [users, setUsers] = useState([]);
-  const [investments, setInvestments] = useState([]);
-  const [offers, setOffers] = useState([]);
-  
-  // Commissions state
-  const [commissions, setCommissions] = useState([]);
-  const [commissionPagination, setCommissionPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
-  const [commissionSearch, setCommissionSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [userError, setUserError] = useState('');
+  const [investmentError, setInvestmentError] = useState('');
+
   const [showCommissionModal, setShowCommissionModal] = useState(false);
   const [editingCommission, setEditingCommission] = useState(null);
   const [commissionFormData, setCommissionFormData] = useState({
@@ -64,32 +188,57 @@ const ReturnsAndCommissions = () => {
     paidOn: '',
     status: 'pending'
   });
-  const [partners, setPartners] = useState([]);
+  const [partnerError, setPartnerError] = useState('');
   const [showCommissionDetails, setShowCommissionDetails] = useState(false);
   const [selectedCommission, setSelectedCommission] = useState(null);
 
-  // Fetch initial data
+  // ---- Determine if we are in a pending tab ----
+  const isPendingReturnsTab = activeTab === TAB_PENDING_RETURNS;
+  const isPendingCommissionsTab = activeTab === TAB_PENDING_COMMISSIONS;
+
+  // ---- Fetch initial data ----
   useEffect(() => {
     fetchUsers();
-    fetchInvestments();
+    fetchAllInvestments();
     fetchOffers();
     fetchPartners();
   }, []);
 
+  // ---- Fetch data when tab or pagination changes ----
+  // Effect for Returns
   useEffect(() => {
-    if (activeTab === 'returns') {
+    if (activeTab === TAB_ALL_RETURNS || activeTab === TAB_PENDING_RETURNS) {
       fetchReturns();
-    } else {
+    }
+  }, [activeTab, returnPagination.page, typeFilter]);
+
+  // Effect for Commissions
+  useEffect(() => {
+    if (activeTab === TAB_ALL_COMMISSIONS || activeTab === TAB_PENDING_COMMISSIONS) {
       fetchCommissions();
     }
-  }, [activeTab, returnPagination.page, typeFilter, commissionPagination.page, statusFilter]);
+  }, [activeTab, commissionPagination.page, statusFilter]);
+
+  // ---- Filter investments when user changes in return form ----
+  useEffect(() => {
+    if (returnFormData.userId) {
+      const filtered = allInvestments.filter(inv => inv.userId === returnFormData.userId);
+      setFilteredInvestments(filtered);
+      if (!filtered.find(inv => inv.id === returnFormData.investmentId)) {
+        setReturnFormData(prev => ({ ...prev, investmentId: '' }));
+      }
+    } else {
+      setFilteredInvestments([]);
+      setReturnFormData(prev => ({ ...prev, investmentId: '' }));
+    }
+  }, [returnFormData.userId, allInvestments]);
 
   // ==================== FETCH FUNCTIONS ====================
   const fetchUsers = async () => {
     try {
-      const response = await userApi.getAll({ limit: 1000 });
+      const response = await adminApi.getUsersDropdown();
       if (response.success) {
-        setUsers(response.data.users);
+        setUsers(response.data.users || []);
       }
     } catch (error) {
       console.error('Failed to fetch users');
@@ -98,20 +247,22 @@ const ReturnsAndCommissions = () => {
 
   const fetchPartners = async () => {
     try {
-      const response = await userApi.getPartners({ limit: 1000 });
+      const response = await adminApi.getUsersDropdown();
       if (response.success) {
-        setPartners(response.data.users);
+        const all = response.data.users || [];
+        const partnersList = all.filter(user => user.partnerType !== 'none');
+        setPartners(partnersList);
       }
     } catch (error) {
       console.error('Failed to fetch partners');
     }
   };
 
-  const fetchInvestments = async () => {
+  const fetchAllInvestments = async () => {
     try {
       const response = await investmentApi.getAll({ limit: 1000 });
       if (response.success) {
-        setInvestments(response.data.investments);
+        setAllInvestments(response.data.investments || []);
       }
     } catch (error) {
       console.error('Failed to fetch investments');
@@ -120,25 +271,38 @@ const ReturnsAndCommissions = () => {
 
   const fetchOffers = async () => {
     try {
-      const response = await offerApi.getAll({ limit: 1000 });
+      const response = await offerApi.getAll();
       if (response.success) {
-        setOffers(response.data.offers);
+        setOffers(response.data || []);
       }
     } catch (error) {
       console.error('Failed to fetch offers');
     }
   };
 
-  // ==================== RETURNS FUNCTIONS ====================
+  // ---- Returns fetch with filters ----
   const fetchReturns = async () => {
     setLoading(true);
     try {
-      const response = await returnApi.getAll({
+      const params = {
         page: returnPagination.page,
         limit: returnPagination.limit,
+        search: returnSearch || undefined,
         type: typeFilter || undefined,
-        search: returnSearch || undefined
-      });
+      };
+
+      // If pending tab, add paidOn filter and month range
+      if (isPendingReturnsTab) {
+        // Get current and previous month start dates
+        const now = new Date();
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        params.paidOn = 'null'; // send a flag to filter unpaid
+        params.monthFrom = previousMonthStart.toISOString();
+        params.monthTo = currentMonthStart.toISOString();
+      }
+
+      const response = await returnApi.getAll(params);
       if (response.success) {
         setReturns(response.data.returns);
         setReturnPagination(response.data.pagination);
@@ -150,21 +314,62 @@ const ReturnsAndCommissions = () => {
     }
   };
 
+  // ---- Commissions fetch with filters ----
+  const fetchCommissions = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        page: commissionPagination.page,
+        limit: commissionPagination.limit,
+        search: commissionSearch || undefined,
+        status: statusFilter || undefined,
+      };
+
+      if (isPendingCommissionsTab) {
+        // Get current and previous month start dates
+        const now = new Date();
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        params.status = 'pending';
+        params.monthFrom = previousMonthStart.toISOString();
+        params.monthTo = currentMonthStart.toISOString();
+      }
+
+      const response = await commissionApi.getAll(params);
+      if (response.success) {
+        setCommissions(response.data.commissions);
+        setCommissionPagination(response.data.pagination);
+      }
+    } catch (error) {
+      toast.error('Failed to fetch commissions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---- Search handlers ----
   const handleReturnSearch = () => {
     setReturnPagination({ ...returnPagination, page: 1 });
     fetchReturns();
   };
 
+  const handleCommissionSearch = () => {
+    setCommissionPagination({ ...commissionPagination, page: 1 });
+    fetchCommissions();
+  };
+
+  // ==================== RETURN CRUD ====================
   const handleReturnSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validation
+    setUserError('');
+    setInvestmentError('');
+
     if (!returnFormData.userId) {
-      toast.error('Please select a user');
+      setUserError('Please select a user');
       return;
     }
     if (!returnFormData.investmentId) {
-      toast.error('Please select an investment');
+      setInvestmentError('Please select an investment');
       return;
     }
     if (!returnFormData.month) {
@@ -191,14 +396,10 @@ const ReturnsAndCommissions = () => {
       let response;
       if (editingReturn) {
         response = await returnApi.update(editingReturn.id, payload);
-        if (response.success) {
-          toast.success('Return updated successfully');
-        }
+        if (response.success) toast.success('Return updated successfully');
       } else {
-        response = await returnApi.create(payload);
-        if (response.success) {
-          toast.success('Return created successfully');
-        }
+        response = await returnApi.createReturns(payload);
+        if (response.success) toast.success('Return created successfully');
       }
 
       if (response.success) {
@@ -252,7 +453,7 @@ const ReturnsAndCommissions = () => {
   };
 
   const handleBatchMarkReturnPaid = async () => {
-    const ids = returns.filter(r => !r.paidOn).map(r => r.id);
+    const ids = returns.filter(r => !r.paidOn)?.map(r => r.id);
     if (ids.length === 0) {
       toast.error('No pending returns to mark as paid');
       return;
@@ -279,41 +480,19 @@ const ReturnsAndCommissions = () => {
       description: '',
       paidOn: ''
     });
+    setFilteredInvestments([]);
     setEditingReturn(null);
+    setUserError('');
+    setInvestmentError('');
   };
 
-  // ==================== COMMISSIONS FUNCTIONS ====================
-  const fetchCommissions = async () => {
-    setLoading(true);
-    try {
-      const response = await commissionApi.getAll({
-        page: commissionPagination.page,
-        limit: commissionPagination.limit,
-        status: statusFilter || undefined,
-        search: commissionSearch || undefined
-      });
-      if (response.success) {
-        setCommissions(response.data.commissions);
-        setCommissionPagination(response.data.pagination);
-      }
-    } catch (error) {
-      toast.error('Failed to fetch commissions');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCommissionSearch = () => {
-    setCommissionPagination({ ...commissionPagination, page: 1 });
-    fetchCommissions();
-  };
-
+  // ==================== COMMISSION CRUD ====================
   const handleCommissionSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validation
+    setPartnerError('');
+
     if (!commissionFormData.partnerId) {
-      toast.error('Please select a partner');
+      setPartnerError('Please select a partner');
       return;
     }
     if (!commissionFormData.month) {
@@ -347,14 +526,10 @@ const ReturnsAndCommissions = () => {
       let response;
       if (editingCommission) {
         response = await commissionApi.update(editingCommission.id, payload);
-        if (response.success) {
-          toast.success('Commission updated successfully');
-        }
+        if (response.success) toast.success('Commission updated successfully');
       } else {
-        response = await commissionApi.create(payload);
-        if (response.success) {
-          toast.success('Commission created successfully');
-        }
+        response = await commissionApi.createCommissions(payload);
+        if (response.success) toast.success('Commission created successfully');
       }
 
       if (response.success) {
@@ -407,7 +582,7 @@ const ReturnsAndCommissions = () => {
   };
 
   const handleBatchMarkCommissionPaid = async () => {
-    const ids = commissions.filter(c => c.status === 'pending').map(c => c.id);
+    const ids = commissions.filter(c => c.status === 'pending')?.map(c => c.id);
     if (ids.length === 0) {
       toast.error('No pending commissions to mark as paid');
       return;
@@ -434,6 +609,7 @@ const ReturnsAndCommissions = () => {
       paidOn: ''
     });
     setEditingCommission(null);
+    setPartnerError('');
   };
 
   const handleViewCommissionDetails = (commission) => {
@@ -456,7 +632,7 @@ const ReturnsAndCommissions = () => {
     }
   }, [commissionFormData.totalInvestmentBase, commissionFormData.commissionRate]);
 
-  // ==================== RENDER FUNCTIONS ====================
+  // ==================== RENDER HELPERS ====================
   const renderReturnTypeBadge = (type) => {
     const colors = {
       'monthly': 'bg-blue-100 text-blue-800',
@@ -498,25 +674,20 @@ const ReturnsAndCommissions = () => {
 
         <form onSubmit={handleReturnSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* User - Autocomplete */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                User <span className="text-red-500">*</span>
-              </label>
-              <select
+              <AutocompleteInput
+                label="User"
+                placeholder="Type to search user..."
+                options={users}
                 value={returnFormData.userId}
-                onChange={(e) => setReturnFormData({ ...returnFormData, userId: e.target.value })}
-                className="input-field w-full"
+                onChange={(id) => setReturnFormData({ ...returnFormData, userId: id })}
                 required
-              >
-                <option value="">Select User</option>
-                {users.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.fullName} ({user.email})
-                  </option>
-                ))}
-              </select>
+                error={userError}
+              />
             </div>
 
+            {/* Investment - Dropdown filtered by user */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Investment <span className="text-red-500">*</span>
@@ -524,18 +695,21 @@ const ReturnsAndCommissions = () => {
               <select
                 value={returnFormData.investmentId}
                 onChange={(e) => setReturnFormData({ ...returnFormData, investmentId: e.target.value })}
-                className="input-field w-full"
+                className={`input-field w-full ${investmentError ? 'border-red-500' : ''}`}
                 required
+                disabled={!returnFormData.userId}
               >
                 <option value="">Select Investment</option>
-                {investments
-                  .filter(inv => !returnFormData.userId || inv.userId === returnFormData.userId)
-                  .map(inv => (
-                    <option key={inv.id} value={inv.id}>
-                      ₹{parseFloat(inv.amount).toLocaleString()} - {inv.type}
-                    </option>
-                  ))}
+                {filteredInvestments.map(inv => (
+                  <option key={inv.id} value={inv.id}>
+                    ₹{parseFloat(inv.amount).toLocaleString()} - {inv.plan?.name || 'N/A'}
+                  </option>
+                ))}
               </select>
+              {investmentError && <p className="mt-1 text-xs text-red-600">{investmentError}</p>}
+              {returnFormData.userId && filteredInvestments.length === 0 && (
+                <p className="mt-1 text-xs text-gray-500">No investments found for this user</p>
+              )}
             </div>
 
             <div>
@@ -670,23 +844,17 @@ const ReturnsAndCommissions = () => {
 
         <form onSubmit={handleCommissionSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Partner - Autocomplete */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Partner <span className="text-red-500">*</span>
-              </label>
-              <select
+              <AutocompleteInput
+                label="Partner"
+                placeholder="Type to search partner..."
+                options={partners}
                 value={commissionFormData.partnerId}
-                onChange={(e) => setCommissionFormData({ ...commissionFormData, partnerId: e.target.value })}
-                className="input-field w-full"
+                onChange={(id) => setCommissionFormData({ ...commissionFormData, partnerId: id })}
                 required
-              >
-                <option value="">Select Partner</option>
-                {partners.map(partner => (
-                  <option key={partner.id} value={partner.id}>
-                    {partner.fullName} ({partner.email})
-                  </option>
-                ))}
-              </select>
+                error={partnerError}
+              />
             </div>
 
             <div>
@@ -881,6 +1049,7 @@ const ReturnsAndCommissions = () => {
     );
   };
 
+
   // ==================== TABLE RENDER FUNCTIONS ====================
   const renderReturnTable = () => (
     <>
@@ -908,23 +1077,26 @@ const ReturnsAndCommissions = () => {
             <option value="offer">Offer</option>
           </select>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleBatchMarkReturnPaid}
-            className="btn-secondary flex items-center gap-2 text-sm"
-          >
-            <FaCheckCircle /> Batch Mark Paid
-          </button>
-          <button
-            onClick={() => {
-              resetReturnForm();
-              setShowReturnModal(true);
-            }}
-            className="btn-primary flex items-center gap-2 text-sm"
-          >
-            <FaPlus /> Add Return
-          </button>
-        </div>
+        {/* Show Add Return and Batch Mark Paid only in pending tab */}
+        {isPendingReturnsTab && (
+          <div className="flex gap-2">
+            <button
+              onClick={handleBatchMarkReturnPaid}
+              className="btn-secondary flex items-center gap-2 text-sm"
+            >
+              <FaCheckCircle /> Batch Mark Paid
+            </button>
+            <button
+              onClick={() => {
+                resetReturnForm();
+                setShowReturnModal(true);
+              }}
+              className="btn-primary flex items-center gap-2 text-sm"
+            >
+              <FaPlus /> Add Return
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -1046,23 +1218,25 @@ const ReturnsAndCommissions = () => {
             <option value="paid">Paid</option>
           </select>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleBatchMarkCommissionPaid}
-            className="btn-secondary flex items-center gap-2 text-sm"
-          >
-            <FaCheckCircle /> Batch Mark Paid
-          </button>
-          <button
-            onClick={() => {
-              resetCommissionForm();
-              setShowCommissionModal(true);
-            }}
-            className="btn-primary flex items-center gap-2 text-sm"
-          >
-            <FaPlus /> Add Payouts
-          </button>
-        </div>
+        {isPendingCommissionsTab && (
+          <div className="flex gap-2">
+            <button
+              onClick={handleBatchMarkCommissionPaid}
+              className="btn-secondary flex items-center gap-2 text-sm"
+            >
+              <FaCheckCircle /> Batch Mark Paid
+            </button>
+            <button
+              onClick={() => {
+                resetCommissionForm();
+                setShowCommissionModal(true);
+              }}
+              className="btn-primary flex items-center gap-2 text-sm"
+            >
+              <FaPlus /> Add Payouts
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -1173,34 +1347,73 @@ const ReturnsAndCommissions = () => {
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8" aria-label="Tabs">
+          {/* All Returns */}
           <button
-            onClick={() => setActiveTab('returns')}
+            onClick={() => setActiveTab(TAB_ALL_RETURNS)}
             className={`
               py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
-              ${activeTab === 'returns'
+              ${activeTab === TAB_ALL_RETURNS
                 ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }
             `}
           >
             <FaWallet className="w-4 h-4" />
-            Returns
+            All Returns
             <span className="bg-gray-100 text-gray-600 ml-2 px-2 py-0.5 rounded-full text-xs">
               {returnPagination.total}
             </span>
           </button>
+
+          {/* Pending Returns */}
           <button
-            onClick={() => setActiveTab('commissions')}
+            onClick={() => setActiveTab(TAB_PENDING_RETURNS)}
             className={`
               py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
-              ${activeTab === 'commissions'
+              ${activeTab === TAB_PENDING_RETURNS
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            <FaCalendarCheck className="w-4 h-4" />
+            Pending Returns
+            <span className="bg-gray-100 text-gray-600 ml-2 px-2 py-0.5 rounded-full text-xs">
+              {returnPagination.total}
+            </span>
+          </button>
+
+          {/* All Commissions */}
+          <button
+            onClick={() => setActiveTab(TAB_ALL_COMMISSIONS)}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === TAB_ALL_COMMISSIONS
                 ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }
             `}
           >
             <FaHandshake className="w-4 h-4" />
-            Partner Payouts
+            All Commissions
+            <span className="bg-gray-100 text-gray-600 ml-2 px-2 py-0.5 rounded-full text-xs">
+              {commissionPagination.total}
+            </span>
+          </button>
+
+          {/* Pending Commissions */}
+          <button
+            onClick={() => setActiveTab(TAB_PENDING_COMMISSIONS)}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === TAB_PENDING_COMMISSIONS
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            <FaMoneyBillWave className="w-4 h-4" />
+            Pending Payouts
             <span className="bg-gray-100 text-gray-600 ml-2 px-2 py-0.5 rounded-full text-xs">
               {commissionPagination.total}
             </span>
@@ -1210,7 +1423,10 @@ const ReturnsAndCommissions = () => {
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'returns' ? renderReturnTable() : renderCommissionTable()}
+        {(activeTab === TAB_ALL_RETURNS || activeTab === TAB_PENDING_RETURNS)
+          ? renderReturnTable()
+          : renderCommissionTable()
+        }
       </div>
 
       {/* Modals */}

@@ -5,7 +5,7 @@ const CreateOfferModal = ({ isOpen, onClose, onSubmit, initialData = null, isEdi
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    rewardType: 'points',
+    rewardType: 'reward points',
     rewardValue: '',
     conditions: {},
     isActive: true,
@@ -17,7 +17,7 @@ const CreateOfferModal = ({ isOpen, onClose, onSubmit, initialData = null, isEdi
       setFormData({
         title: initialData.title || '',
         description: initialData.description || '',
-        rewardType: initialData.rewardType || 'points',
+        rewardType: initialData.rewardType || 'reward points',
         rewardValue: initialData.rewardValue || '',
         conditions: initialData.conditions || {},
         isActive: initialData.isActive !== undefined ? initialData.isActive : true,
@@ -36,7 +36,7 @@ const CreateOfferModal = ({ isOpen, onClose, onSubmit, initialData = null, isEdi
         setFormData({
           title: '',
           description: '',
-          rewardType: 'points',
+          rewardType: 'reward points',
           rewardValue: '',
           conditions: {},
           isActive: true,
@@ -94,8 +94,8 @@ const CreateOfferModal = ({ isOpen, onClose, onSubmit, initialData = null, isEdi
               className="input-field"
               required
             >
-              <option value="points">Points</option>
-              <option value="voucher">Voucher</option>
+              <option value="reward points">Reward Points</option>
+              <option value="gift">Voucher</option>
               <option value="cashback">Cashback</option>
             </select>
           </div>

@@ -2,6 +2,11 @@ import apiClient from './apiClient';
 
 export const commissionApi = {
   // READ (User's own)
+  createCommissions: async (data) => {
+    const response = await apiClient.post('/partner-commissions/', data);
+    return response.data;
+  },
+
   getMyCommissions: async (params) => {
     const response = await apiClient.get('/partner-commissions/my', { params });
     return response.data;

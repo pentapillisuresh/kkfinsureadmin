@@ -2,6 +2,11 @@ import apiClient from './apiClient';
 
 export const returnApi = {
   // READ (User's own)
+  createReturns: async (data) => {
+    const response = await apiClient.post('/returns', data );
+    return response.data;
+  },
+
   getMyReturns: async (params) => {
     const response = await apiClient.get('/returns/my', { params });
     return response.data;
