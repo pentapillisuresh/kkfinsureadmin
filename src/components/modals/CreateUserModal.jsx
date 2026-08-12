@@ -5,7 +5,7 @@ import {
   FiMapPin, FiCreditCard, FiLock, FiUserPlus,
   FiFileText, FiCheck, FiArrowRight, FiArrowLeft,
   FiUpload, FiFile, FiTrash2, FiAlertCircle,
-  FiDollarSign, FiHash, FiBook, FiGlobe
+  FiDollarSign, FiHash, FiBook, FiGlobe, FiEye, FiEyeOff
 } from 'react-icons/fi';
 import { FaSearch } from 'react-icons/fa';
 import { FaSpinner } from 'react-icons/fa';
@@ -30,6 +30,7 @@ const AutocompleteInput = ({
   const [inputValue, setInputValue] = useState('');
   const [filteredOptions, setFilteredOptions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+ 
   const wrapperRef = useRef(null);
 
   const selectedOption = options?.find(opt => opt?.id === value);
@@ -150,6 +151,7 @@ const CreateUserModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [stepErrors, setStepErrors] = useState({});
   const [isReferred, setIsReferred] = useState(false);
+   const [showPassword, setShowPassword] = useState(false);
   const [users, setUsers] = useState([]);
 
   const [userData, setUserData] = useState({
@@ -520,25 +522,46 @@ const CreateUserModal = ({ isOpen, onClose }) => {
           </div>
           {renderError('email')}
         </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-            Password <span className="text-red-500">*</span>
-          </label>
-          <div className="relative group">
-            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
-            <input
-              type="password"
-              name="password"
-              value={userData.password}
-              onChange={handleUserChange}
-              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
-                stepErrors.password ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
-              }`}
-              placeholder="Min 6 characters"
-            />
-          </div>
-          {renderError('password')}
-        </div>
+     <div>
+  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+    Password <span className="text-red-500">*</span>
+  </label>
+
+  <div className="relative group">
+    <FiLock
+      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200"
+      size={18}
+    />
+
+    <input
+      type={showPassword ? "text" : "password"}
+      name="password"
+      value={userData.password}
+      onChange={handleUserChange}
+      className={`w-full pl-10 pr-12 py-2.5 bg-gray-50 border-2 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white ${
+        stepErrors.password
+          ? 'border-red-400 focus:border-red-500'
+          : 'border-gray-200 focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10'
+      }`}
+      placeholder="Min 6 characters"
+    />
+
+    <button
+      type="button"
+      onClick={() => setShowPassword(prev => !prev)}
+      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+      aria-label={showPassword ? "Hide password" : "Show password"}
+    >
+      {showPassword ? (
+        <FiEyeOff size={18} />
+      ) : (
+        <FiEye size={18} />
+      )}
+    </button>
+  </div>
+
+  {renderError('password')}
+</div>
         <div>
           <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
             Phone

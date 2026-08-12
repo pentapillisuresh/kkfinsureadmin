@@ -81,7 +81,7 @@ const CommissionsList = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-2xl font-bold text-gray-900">Partner Commissions</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Partner Payouts</h2>
         <div className="flex gap-2">
           <button
             onClick={handleProcessMonthly}
@@ -139,7 +139,7 @@ const CommissionsList = () => {
               ) : commissions.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="text-center py-8 text-gray-500">
-                    No commissions found
+                    No payouts found
                   </td>
                 </tr>
               ) : (
