@@ -594,6 +594,7 @@ const UserDetails = () => {
     fetchUserDetails();
   }, [id]);
 
+  
   const fetchUserDetails = async () => {
     setLoading(true);
     try {
@@ -690,6 +691,21 @@ const UserDetails = () => {
     }
   };
 
+  const handleToggleStatus = async (id) => {
+    try {
+      const response = await adminApi.toggleUserStatus(id);
+      if (response.success) {
+        toast.success(response.message || 'User status updated');
+        fetchUserDetails();
+      } else {
+        toast.error(response.message || 'Failed to update user status');
+      }
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      toast.error(error.response?.data?.message || 'Failed to update user status');
+    }
+  };
+
   // ---- Tabs ----
   const tabs = [
     { id: 'profile', label: 'Profile', icon: FiUser },
@@ -744,7 +760,7 @@ const UserDetails = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => {}} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${user.isActive ? 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border border-green-200' : 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border border-red-200'}`}>
+          <button onClick={() => handleToggleStatus(user.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${user.isActive ? 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border border-green-200' : 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border border-red-200'}`}>
             {user.isActive ? <FiToggleRight className="w-5 h-5" /> : <FiToggleLeft className="w-5 h-5" />}
             {user.isActive ? 'Active' : 'Inactive'}
           </button>

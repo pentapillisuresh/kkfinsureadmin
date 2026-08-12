@@ -405,7 +405,7 @@ const UsersList = () => {
                             title="Edit"
                           >
                             <FiEdit className="w-4 h-4" />
-                          </button> */}
+                          </button> */} 
                           <button
                             onClick={() => handleToggleStatus(user.id)}
                             className={`p-2 rounded-lg transition-all group-hover:scale-105 ${user.isActive

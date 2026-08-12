@@ -4,7 +4,7 @@ import { userApi } from '../../api/userApi';
 import SearchBar from '../../components/common/SearchBar';
 import Pagination from '../../components/common/Pagination';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { FaPlus, FaTrash, FaCoins } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaTrash, FaCoins, FaEdit } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const PointsList = () => {
@@ -21,6 +21,17 @@ const PointsList = () => {
     description: '',
   });
 
+  // ---- Edit state ----
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({
+    userId: '',
+    points: '',
+    source: 'other',
+    description: '',
+    expiresAt: '',
+  });
+
   useEffect(() => {
     fetchPoints();
     fetchUsers();
@@ -32,6 +43,7 @@ const PointsList = () => {
       const response = await pointsApi.getAll({
         page: pagination.page,
         limit: pagination.limit,
+        search: search || undefined,
       });
       if (response.success) {
         setPoints(response.data.pointEntries);
@@ -55,6 +67,7 @@ const PointsList = () => {
     }
   };
 
+  // ---- Delete ----
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this point entry?')) return;
     try {
@@ -68,6 +81,7 @@ const PointsList = () => {
     }
   };
 
+  // ---- Add Points ----
   const handleAddPoints = async (e) => {
     e.preventDefault();
     if (!addData.userId || !addData.points) {
@@ -92,6 +106,234 @@ const PointsList = () => {
     }
   };
 
+  // ---- Edit Points ----
+  const handleEditClick = (entry) => {
+    setEditingId(entry.id);
+    setEditData({
+      userId: entry.userId,
+      points: entry.points.toString(),
+      source: entry.source || 'other',
+      description: entry.description || '',
+      expiresAt: entry.expiresAt ? entry.expiresAt.split('T')[0] : '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editData.userId || !editData.points) {
+      toast.error('Please select user and enter points');
+      return;
+    }
+    try {
+      const payload = {
+        userId: editData.userId,
+        points: parseInt(editData.points),
+        source: editData.source,
+        description: editData.description || null,
+        expiresAt: editData.expiresAt || null,
+      };
+      const response = await pointsApi.update(editingId, payload);
+      if (response.success) {
+        toast.success('Point entry updated successfully');
+        setShowEditModal(false);
+        setEditData({ userId: '', points: '', source: 'other', description: '', expiresAt: '' });
+        fetchPoints();
+      }
+    } catch (error) {
+      toast.error('Failed to update point entry');
+    }
+  };
+
+  // ---- Render Add Modal ----
+  const renderAddModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Add Points to User</h3>
+          <button
+            onClick={() => setShowAddModal(false)}
+            className="p-1.5 rounded-lg hover:bg-gray-100"
+          >
+            <FaTimes className="text-gray-500" />
+          </button>
+        </div>
+        <form onSubmit={handleAddPoints} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">User *</label>
+            <select
+              value={addData.userId}
+              onChange={(e) => setAddData({ ...addData, userId: e.target.value })}
+              className="input-field"
+              required
+            >
+              <option value="">Select User</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.fullName} ({user.email})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Points *</label>
+            <input
+              type="number"
+              value={addData.points}
+              onChange={(e) => setAddData({ ...addData, points: e.target.value })}
+              className="input-field"
+              placeholder="Enter points"
+              min="1"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Source</label>
+            <select
+              value={addData.source}
+              onChange={(e) => setAddData({ ...addData, source: e.target.value })}
+              className="input-field"
+            >
+              <option value="login">Login</option>
+              <option value="referral">Referral</option>
+              <option value="offer">Offer</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <input
+              type="text"
+              value={addData.description}
+              onChange={(e) => setAddData({ ...addData, description: e.target.value })}
+              className="input-field"
+              placeholder="Reason for points"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="flex-1 btn-secondary"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="flex-1 btn-primary">
+              <FaCoins className="inline mr-2" /> Add Points
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+
+  // ---- Render Edit Modal ----
+  const renderEditModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Edit Point Entry</h3>
+          <button
+            onClick={() => {
+              setShowEditModal(false);
+              setEditData({ userId: '', points: '', source: 'other', description: '', expiresAt: '' });
+            }}
+            className="p-1.5 rounded-lg hover:bg-gray-100"
+          >
+            <FaTimes className="text-gray-500" />
+          </button>
+        </div>
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">User *</label>
+            <select
+              value={editData.userId}
+              onChange={(e) => setEditData({ ...editData, userId: e.target.value })}
+              className="input-field"
+              required
+            >
+              <option value="">Select User</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.fullName} ({user.email})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Points *</label>
+            <input
+              type="number"
+              value={editData.points}
+              onChange={(e) => setEditData({ ...editData, points: e.target.value })}
+              className="input-field"
+              placeholder="Enter points"
+              min="-9999"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Source</label>
+            <select
+              value={editData.source}
+              onChange={(e) => setEditData({ ...editData, source: e.target.value })}
+              className="input-field"
+            >
+              <option value="login">Login</option>
+              <option value="referral">Referral</option>
+              <option value="offer">Offer</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <input
+              type="text"
+              value={editData.description}
+              onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+              className="input-field"
+              placeholder="Reason for points"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Expires At (Optional)</label>
+            <input
+              type="date"
+              value={editData.expiresAt}
+              onChange={(e) => setEditData({ ...editData, expiresAt: e.target.value })}
+              className="input-field"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setShowEditModal(false);
+                setEditData({ userId: '', points: '', source: 'other', description: '', expiresAt: '' });
+              }}
+              className="flex-1 btn-secondary"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="flex-1 btn-primary">
+              <FaEdit className="inline mr-2" /> Update Points
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+
+  // ---- Main Render ----
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -107,6 +349,10 @@ const PointsList = () => {
       <SearchBar
         value={search}
         onChange={setSearch}
+        onSearch={() => {
+          setPagination({ ...pagination, page: 1 });
+          fetchPoints();
+        }}
         placeholder="Search points..."
       />
 
@@ -119,6 +365,7 @@ const PointsList = () => {
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Points</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Source</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Description</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Expires</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Date</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
               </tr>
@@ -126,13 +373,13 @@ const PointsList = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-8">
+                  <td colSpan="7" className="text-center py-8">
                     <LoadingSpinner />
                   </td>
                 </tr>
               ) : points.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-8 text-gray-500">
+                  <td colSpan="7" className="text-center py-8 text-gray-500">
                     No point entries found
                   </td>
                 </tr>
@@ -141,21 +388,33 @@ const PointsList = () => {
                   <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-sm">{entry.user?.fullName || 'N/A'}</td>
                     <td className="py-3 px-4 text-sm font-bold text-primary-600">
-                      +{entry.points}
+                      {entry.points > 0 ? '+' : ''}{entry.points}
                     </td>
                     <td className="py-3 px-4 text-sm capitalize">{entry.source}</td>
                     <td className="py-3 px-4 text-sm">{entry.description || '-'}</td>
                     <td className="py-3 px-4 text-sm">
-                      {new Date(entry.createdAt).toLocaleString()}
+                      {entry.expiresAt ? new Date(entry.expiresAt).toLocaleDateString() : 'Never'}
                     </td>
                     <td className="py-3 px-4 text-sm">
-                      <button
-                        onClick={() => handleDelete(entry.id)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <FaTrash />
-                      </button>
+                      {new Date(entry.createdAt).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditClick(entry)}
+                          className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <FaEdit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(entry.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -173,94 +432,8 @@ const PointsList = () => {
         />
       )}
 
-      {/* Add Points Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Add Points to User</h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="p-1.5 rounded-lg hover:bg-gray-100"
-              >
-                <FaTimes className="text-gray-500" />
-              </button>
-            </div>
-            <form onSubmit={handleAddPoints} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">User *</label>
-                <select
-                  value={addData.userId}
-                  onChange={(e) => setAddData({ ...addData, userId: e.target.value })}
-                  className="input-field"
-                  required
-                >
-                  <option value="">Select User</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.fullName} ({user.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Points *</label>
-                <input
-                  type="number"
-                  value={addData.points}
-                  onChange={(e) => setAddData({ ...addData, points: e.target.value })}
-                  className="input-field"
-                  placeholder="Enter points"
-                  min="1"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Source</label>
-                <select
-                  value={addData.source}
-                  onChange={(e) => setAddData({ ...addData, source: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="login">Login</option>
-                  <option value="referral">Referral</option>
-                  <option value="offer">Offer</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <input
-                  type="text"
-                  value={addData.description}
-                  onChange={(e) => setAddData({ ...addData, description: e.target.value })}
-                  className="input-field"
-                  placeholder="Reason for points"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 btn-primary"
-                >
-                  <FaCoins className="inline mr-2" /> Add Points
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showAddModal && renderAddModal()}
+      {showEditModal && renderEditModal()}
     </div>
   );
 };

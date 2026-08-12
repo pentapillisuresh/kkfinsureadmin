@@ -31,7 +31,7 @@ const CommissionsList = () => {
         setPagination(response.data.pagination);
       }
     } catch (error) {
-      toast.error('Failed to fetch commissions');
+      toast.error('Failed to fetch referral partner Payouts');
     } finally {
       setLoading(false);
     }
@@ -52,13 +52,13 @@ const CommissionsList = () => {
   const handleBatchMarkPaid = async () => {
     const pendingIds = commissions.filter(c => c.status === 'pending').map(c => c.id);
     if (pendingIds.length === 0) {
-      toast.error('No pending commissions to mark as paid');
+      toast.error('No pending referral partner Payouts to mark as paid');
       return;
     }
     try {
       const response = await commissionApi.batchMarkAsPaid({ ids: pendingIds });
       if (response.success) {
-        toast.success(`${response.data.updated} commissions marked as paid`);
+        toast.success(`${response.data.updated} referral partner Payouts marked as paid`);
         fetchCommissions();
       }
     } catch (error) {
@@ -70,11 +70,11 @@ const CommissionsList = () => {
     try {
       const response = await commissionApi.processMonthly();
       if (response.success) {
-        toast.success('Monthly commissions processed successfully');
+        toast.success('Monthly referral partner Payouts processed successfully');
         fetchCommissions();
       }
     } catch (error) {
-      toast.error('Failed to process commissions');
+      toast.error('Failed to process referral partner Payouts');
     }
   };
 
@@ -102,7 +102,7 @@ const CommissionsList = () => {
         <SearchBar
           value={search}
           onChange={setSearch}
-          placeholder="Search commissions..."
+          placeholder="Search referral partner Payouts..."
         />
         <select
           value={statusFilter}

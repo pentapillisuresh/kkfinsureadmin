@@ -54,6 +54,11 @@ export const returnApi = {
     return response.data;
   },
 
+  update: async (id,data) => {
+    const response = await apiClient.put(`/returns/${id}`,data);
+    return response.data;
+  },
+
   // BATCH MARK AS PAID
   batchMarkAsPaid: async (ids) => {
     const response = await apiClient.put('/returns/batch/pay', { ids });

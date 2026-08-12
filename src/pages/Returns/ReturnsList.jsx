@@ -8,7 +8,7 @@ import SearchBar from '../../components/common/SearchBar';
 import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { FaCheckCircle, FaMoneyBillWave, FaTimes, FaWallet, FaHandshake, FaCalendarCheck, FaFileInvoice, FaPlus, FaEdit, FaTrash, FaEye, FaSearch} from 'react-icons/fa';
+import { FaCheckCircle, FaMoneyBillWave, FaTimes, FaWallet, FaHandshake, FaCalendarCheck, FaFileInvoice, FaPlus, FaEdit, FaTrash, FaEye, FaSearch } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { adminApi } from '../../api/adminApi';
 
@@ -149,13 +149,13 @@ const ReturnsAndCommissions = () => {
   const [partners, setPartners] = useState([]);
   const [filteredInvestments, setFilteredInvestments] = useState([]);
 
-  // ---- Returns state (shared between all-returns and pending-returns) ----
+  // ---- Returns state ----
   const [returns, setReturns] = useState([]);
   const [returnPagination, setReturnPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [returnSearch, setReturnSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
 
-  // ---- Commissions state (shared between all-commissions and pending-commissions) ----
+  // ---- Commissions state ----
   const [commissions, setCommissions] = useState([]);
   const [commissionPagination, setCommissionPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [commissionSearch, setCommissionSearch] = useState('');
@@ -210,7 +210,7 @@ const ReturnsAndCommissions = () => {
     if (activeTab === TAB_ALL_RETURNS || activeTab === TAB_PENDING_RETURNS) {
       fetchReturns();
     }
-  }, [activeTab, returnPagination.page, typeFilter]);
+  }, [activeTab, returnPagination.page, typeFilter]); // ✅ added page
 
   // Effect for Commissions
   useEffect(() => {
@@ -219,7 +219,7 @@ const ReturnsAndCommissions = () => {
     }
   }, [activeTab, commissionPagination.page, statusFilter]);
 
-  // ---- Filter investments when user changes in return form ----
+  // ---- Filter investments when user changes ----
   useEffect(() => {
     if (returnFormData.userId) {
       const filtered = allInvestments.filter(inv => inv.userId === returnFormData.userId);
@@ -284,28 +284,37 @@ const ReturnsAndCommissions = () => {
   const fetchReturns = async () => {
     setLoading(true);
     try {
+      const page = returnPagination.page;
+      const limit = returnPagination.limit;
+      const offset = (page - 1) * limit; // ✅ correct offset
+
       const params = {
-        page: returnPagination.page,
-        limit: returnPagination.limit,
+        offset,
+        limit,
         search: returnSearch || undefined,
         type: typeFilter || undefined,
       };
 
-      // If pending tab, add paidOn filter and month range
       if (isPendingReturnsTab) {
-        // Get current and previous month start dates
         const now = new Date();
         const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        params.paidOn = 'null'; // send a flag to filter unpaid
+        params.paidOn = 'null';
         params.monthFrom = previousMonthStart.toISOString();
         params.monthTo = currentMonthStart.toISOString();
       }
 
       const response = await returnApi.getAll(params);
       if (response.success) {
+        const { total, limit: resLimit, page: resPage } = response.data.pagination;
+        const totalPages = Math.ceil(total / resLimit);
         setReturns(response.data.returns);
-        setReturnPagination(response.data.pagination);
+        setReturnPagination({
+          total,
+          page: resPage || page,
+          limit: resLimit,
+          totalPages,
+        });
       }
     } catch (error) {
       toast.error('Failed to fetch returns');
@@ -318,15 +327,18 @@ const ReturnsAndCommissions = () => {
   const fetchCommissions = async () => {
     setLoading(true);
     try {
+      const page = commissionPagination.page;
+      const limit = commissionPagination.limit;
+      const offset = (page - 1) * limit; // ✅ correct offset
+
       const params = {
-        page: commissionPagination.page,
-        limit: commissionPagination.limit,
+        offset,
+        limit,
         search: commissionSearch || undefined,
         status: statusFilter || undefined,
       };
 
       if (isPendingCommissionsTab) {
-        // Get current and previous month start dates
         const now = new Date();
         const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -337,11 +349,18 @@ const ReturnsAndCommissions = () => {
 
       const response = await commissionApi.getAll(params);
       if (response.success) {
+        const { total, limit: resLimit, page: resPage } = response.data.pagination;
+        const totalPages = Math.ceil(total / resLimit);
         setCommissions(response.data.commissions);
-        setCommissionPagination(response.data.pagination);
+        setCommissionPagination({
+          total,
+          page: resPage || page,
+          limit: resLimit,
+          totalPages,
+        });
       }
     } catch (error) {
-      toast.error('Failed to fetch commissions');
+      toast.error('Failed to fetch referral payouts');
     } finally {
       setLoading(false);
     }
@@ -349,13 +368,13 @@ const ReturnsAndCommissions = () => {
 
   // ---- Search handlers ----
   const handleReturnSearch = () => {
-    setReturnPagination({ ...returnPagination, page: 1 });
-    fetchReturns();
+    setReturnPagination(prev => ({ ...prev, page: 1 }));
+    // fetch will be triggered by the effect
   };
 
   const handleCommissionSearch = () => {
-    setCommissionPagination({ ...commissionPagination, page: 1 });
-    fetchCommissions();
+    setCommissionPagination(prev => ({ ...prev, page: 1 }));
+    // fetch will be triggered by the effect
   };
 
   // ==================== RETURN CRUD ====================
@@ -405,7 +424,9 @@ const ReturnsAndCommissions = () => {
       if (response.success) {
         setShowReturnModal(false);
         resetReturnForm();
-        fetchReturns();
+        // Don't fetch here; the effect will handle it when page/type changes.
+        // We can manually trigger by resetting page to 1.
+        setReturnPagination(prev => ({ ...prev, page: 1 }));
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to save return');
@@ -433,7 +454,7 @@ const ReturnsAndCommissions = () => {
       const response = await returnApi.delete(id);
       if (response.success) {
         toast.success('Return deleted successfully');
-        fetchReturns();
+        setReturnPagination(prev => ({ ...prev, page: 1 }));
       }
     } catch (error) {
       toast.error('Failed to delete return');
@@ -445,6 +466,7 @@ const ReturnsAndCommissions = () => {
       const response = await returnApi.markAsPaid(id);
       if (response.success) {
         toast.success('Return marked as paid');
+        // Refresh current page
         fetchReturns();
       }
     } catch (error) {
@@ -504,11 +526,11 @@ const ReturnsAndCommissions = () => {
       return;
     }
     if (!commissionFormData.commissionRate || parseFloat(commissionFormData.commissionRate) <= 0) {
-      toast.error('Please enter a valid commission rate');
+      toast.error('Please enter a valid referral payout rate');
       return;
     }
     if (!commissionFormData.commissionAmount || parseFloat(commissionFormData.commissionAmount) <= 0) {
-      toast.error('Please enter a valid commission amount');
+      toast.error('Please enter a valid referral payout amount');
       return;
     }
 
@@ -535,10 +557,10 @@ const ReturnsAndCommissions = () => {
       if (response.success) {
         setShowCommissionModal(false);
         resetCommissionForm();
-        fetchCommissions();
+        setCommissionPagination(prev => ({ ...prev, page: 1 }));
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save commission');
+      toast.error(error.response?.data?.message || 'Failed to save referral payout');
     }
   };
 
@@ -557,15 +579,15 @@ const ReturnsAndCommissions = () => {
   };
 
   const handleDeleteCommission = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this commission?')) return;
+    if (!window.confirm('Are you sure you want to delete this referral payout?')) return;
     try {
       const response = await commissionApi.delete(id);
       if (response.success) {
         toast.success('Commission deleted successfully');
-        fetchCommissions();
+        setCommissionPagination(prev => ({ ...prev, page: 1 }));
       }
     } catch (error) {
-      toast.error('Failed to delete commission');
+      toast.error('Failed to delete referral payout');
     }
   };
 
@@ -584,13 +606,13 @@ const ReturnsAndCommissions = () => {
   const handleBatchMarkCommissionPaid = async () => {
     const ids = commissions.filter(c => c.status === 'pending')?.map(c => c.id);
     if (ids.length === 0) {
-      toast.error('No pending commissions to mark as paid');
+      toast.error('No pending referral payouts to mark as paid');
       return;
     }
     try {
       const response = await commissionApi.batchMarkAsPaid(ids);
       if (response.success) {
-        toast.success(`${response.data.updated} commissions marked as paid`);
+        toast.success(`${response.data.updated} referral payouts marked as paid`);
         fetchCommissions();
       }
     } catch (error) {
@@ -651,8 +673,9 @@ const ReturnsAndCommissions = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  // ==================== MODALS ====================
+  // ==================== MODALS (unchanged) ====================
   const renderReturnModal = () => (
+    // ... (same as before)
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
@@ -823,6 +846,7 @@ const ReturnsAndCommissions = () => {
   );
 
   const renderCommissionModal = () => (
+    // ... (same as before)
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
@@ -1002,10 +1026,7 @@ const ReturnsAndCommissions = () => {
               <div>
                 <p className="text-sm text-gray-500">Month</p>
                 <p className="font-medium">
-                  {new Date(selectedCommission.month).toLocaleDateString('en-IN', { 
-                    month: 'long', 
-                    year: 'numeric' 
-                  })}
+                  {new Date(selectedCommission.month).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
                 </p>
               </div>
               <div>
@@ -1066,7 +1087,7 @@ const ReturnsAndCommissions = () => {
             value={typeFilter}
             onChange={(e) => {
               setTypeFilter(e.target.value);
-              setReturnPagination({ ...returnPagination, page: 1 });
+              setReturnPagination(prev => ({ ...prev, page: 1 }));
             }}
             className="input-field max-w-xs"
           >
@@ -1077,7 +1098,6 @@ const ReturnsAndCommissions = () => {
             <option value="offer">Offer</option>
           </select>
         </div>
-        {/* Show Add Return and Batch Mark Paid only in pending tab */}
         {isPendingReturnsTab && (
           <div className="flex gap-2">
             <button
@@ -1105,10 +1125,12 @@ const ReturnsAndCommissions = () => {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">User</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">UserID</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Investment</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Month</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">ROI</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
               </tr>
@@ -1133,6 +1155,9 @@ const ReturnsAndCommissions = () => {
                       <div className="text-sm font-medium text-gray-900">{ret.user?.fullName || 'N/A'}</div>
                       <div className="text-xs text-gray-500">{ret.user?.email}</div>
                     </td>
+                    <td className="py-3 px-4">
+                      <div className="text-sm font-medium text-gray-900">{ret.user?.batchId || 'N/A'}</div>
+                    </td>
                     <td className="py-3 px-4 text-sm">
                       ₹{parseFloat(ret.investment?.amount || 0).toLocaleString()}
                     </td>
@@ -1148,7 +1173,11 @@ const ReturnsAndCommissions = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <StatusBadge status={ret.paidOn ? 'paid' : 'pending'} />
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${renderReturnTypeBadge(ret.type)}`}>
+                      {ret.ROI != null ? `${parseInt(ret.ROI)}%` : '-'}                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <StatusBadge status={ret.status === 'active' ? 'paid' : 'pending'} />
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -1188,7 +1217,7 @@ const ReturnsAndCommissions = () => {
         <Pagination
           currentPage={returnPagination.page}
           totalPages={returnPagination.totalPages}
-          onPageChange={(page) => setReturnPagination({ ...returnPagination, page })}
+          onPageChange={(page) => setReturnPagination(prev => ({ ...prev, page }))}
         />
       )}
     </>
@@ -1202,14 +1231,14 @@ const ReturnsAndCommissions = () => {
             value={commissionSearch}
             onChange={setCommissionSearch}
             onSearch={handleCommissionSearch}
-            placeholder="Search commissions by partner..."
+            placeholder="Search referral payouts by partner..."
             className="flex-1"
           />
           <select
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
-              setCommissionPagination({ ...commissionPagination, page: 1 });
+              setCommissionPagination(prev => ({ ...prev, page: 1 }));
             }}
             className="input-field max-w-xs"
           >
@@ -1335,7 +1364,7 @@ const ReturnsAndCommissions = () => {
         <Pagination
           currentPage={commissionPagination.page}
           totalPages={commissionPagination.totalPages}
-          onPageChange={(page) => setCommissionPagination({ ...commissionPagination, page })}
+          onPageChange={(page) => setCommissionPagination(prev => ({ ...prev, page }))}
         />
       )}
     </>
@@ -1344,19 +1373,15 @@ const ReturnsAndCommissions = () => {
   // ==================== MAIN RENDER ====================
   return (
     <div className="space-y-6">
-      {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8" aria-label="Tabs">
-          {/* All Returns */}
           <button
             onClick={() => setActiveTab(TAB_ALL_RETURNS)}
-            className={`
-              py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
-              ${activeTab === TAB_ALL_RETURNS
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === TAB_ALL_RETURNS
                 ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
+            }`}
           >
             <FaWallet className="w-4 h-4" />
             All Returns
@@ -1365,16 +1390,13 @@ const ReturnsAndCommissions = () => {
             </span>
           </button>
 
-          {/* Pending Returns */}
           <button
             onClick={() => setActiveTab(TAB_PENDING_RETURNS)}
-            className={`
-              py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
-              ${activeTab === TAB_PENDING_RETURNS
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === TAB_PENDING_RETURNS
                 ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
+            }`}
           >
             <FaCalendarCheck className="w-4 h-4" />
             Pending Returns
@@ -1383,37 +1405,31 @@ const ReturnsAndCommissions = () => {
             </span>
           </button>
 
-          {/* All Commissions */}
           <button
             onClick={() => setActiveTab(TAB_ALL_COMMISSIONS)}
-            className={`
-              py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
-              ${activeTab === TAB_ALL_COMMISSIONS
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === TAB_ALL_COMMISSIONS
                 ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
+            }`}
           >
             <FaHandshake className="w-4 h-4" />
-            All Commissions
+            All Partner Payouts
             <span className="bg-gray-100 text-gray-600 ml-2 px-2 py-0.5 rounded-full text-xs">
               {commissionPagination.total}
             </span>
           </button>
 
-          {/* Pending Commissions */}
           <button
             onClick={() => setActiveTab(TAB_PENDING_COMMISSIONS)}
-            className={`
-              py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
-              ${activeTab === TAB_PENDING_COMMISSIONS
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === TAB_PENDING_COMMISSIONS
                 ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
+            }`}
           >
             <FaMoneyBillWave className="w-4 h-4" />
-            Pending Payouts
+            Pending Partner Payouts
             <span className="bg-gray-100 text-gray-600 ml-2 px-2 py-0.5 rounded-full text-xs">
               {commissionPagination.total}
             </span>
@@ -1421,15 +1437,12 @@ const ReturnsAndCommissions = () => {
         </nav>
       </div>
 
-      {/* Tab Content */}
       <div>
         {(activeTab === TAB_ALL_RETURNS || activeTab === TAB_PENDING_RETURNS)
           ? renderReturnTable()
-          : renderCommissionTable()
-        }
+          : renderCommissionTable()}
       </div>
 
-      {/* Modals */}
       {showReturnModal && renderReturnModal()}
       {showCommissionModal && renderCommissionModal()}
       {showCommissionDetails && renderCommissionDetailsModal()}
