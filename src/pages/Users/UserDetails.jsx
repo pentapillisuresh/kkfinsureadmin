@@ -17,6 +17,8 @@ import { FaSpinner } from 'react-icons/fa';
 import { formatDate, getStatusColor, getInitials } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
+const VITE_BASE_URL="https://service.kkfinsure.org/"
+
 // ============================================================
 // Edit Profile Modal
 // ============================================================
@@ -1328,7 +1330,7 @@ const DocumentsTab = ({ documents, onEdit }) => {
             <div className="mt-3 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
               <FiFileText className="text-green-500" />
               <span className="text-sm text-gray-600 truncate flex-1">{panDoc.filePath}</span>
-              <a href={panDoc.filePath} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
+              <a href={`${VITE_BASE_URL}${panDoc.filePath}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
             </div>
           ) : (
             <p className="text-sm text-gray-400 mt-2">Not uploaded</p>
@@ -1340,7 +1342,7 @@ const DocumentsTab = ({ documents, onEdit }) => {
             <div className="mt-3 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
               <FiFileText className="text-green-500" />
               <span className="text-sm text-gray-600 truncate flex-1">{aadharDoc.filePath}</span>
-              <a href={aadharDoc.filePath} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
+              <a href={`${VITE_BASE_URL}${aadharDoc.filePath}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
             </div>
           ) : (
             <p className="text-sm text-gray-400 mt-2">Not uploaded</p>

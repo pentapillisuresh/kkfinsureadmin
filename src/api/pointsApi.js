@@ -48,4 +48,8 @@ export const pointsApi = {
     const response = await apiClient.put(`/user-points/${id}/expire`, { expiresAt });
     return response.data;
   },
+  update: async (id, data) => {
+    const response = await apiClient.put(`/user-points/${id}`, data);
+    return response.data;
+  },
 };
