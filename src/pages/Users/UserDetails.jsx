@@ -5,19 +5,13 @@ import { adminApi } from '../../api/adminApi';
 import { nomineeApi } from '../../api/nomineeApi';
 import { documentApi } from '../../api/documentApi';
 import { filesAPI } from '../../api/files';
-import {
-  FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiMapPin,
-  FiCreditCard, FiUserPlus, FiLock, FiEdit, FiToggleRight, FiToggleLeft,
-  FiDownload, FiFileText, FiAward, FiPieChart, FiDollarSign, FiClock,
-  FiCheckCircle, FiXCircle, FiLink, FiImage, FiFile, FiActivity,
-  FiUsers, FiBriefcase, FiStar, FiX, FiUpload, FiTrash2, FiAlertCircle,
-  FiBook, FiGlobe, FiHash
-} from 'react-icons/fi';
+import { FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiCreditCard, FiUserPlus, FiLock, FiEdit, FiToggleRight, FiToggleLeft, FiDownload, FiFileText, FiAward, FiPieChart, FiDollarSign, FiClock, FiCheckCircle, FiXCircle, FiLink, FiImage, FiFile, FiActivity, FiUsers, FiBriefcase, FiStar, FiX, FiUpload, FiTrash2, FiAlertCircle, FiBook, FiGlobe, FiHash} from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
 import { formatDate, getStatusColor, getInitials } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
-const VITE_BASE_URL="https://service.kkfinsure.org/"
+// const VITE_BASE_URL="https://service.kkfinsure.org/"
+const VITE_BASE_URL="http://localhost:3000/"
 
 // ============================================================
 // Edit Profile Modal

@@ -66,7 +66,7 @@ const CreatePlanModal = ({ isOpen, onClose, onSubmit }) => {
               className="input-field"
             >
               <option value="falcon">Falcon</option>
-              <option value="AIP">AIP</option>
+              <option value="AIF">AIF</option>
             </select>
           </div>
 

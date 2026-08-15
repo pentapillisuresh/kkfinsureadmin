@@ -1174,7 +1174,7 @@ const ReturnsAndCommissions = () => {
                     </td>
                     <td className="py-3 px-4">
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${renderReturnTypeBadge(ret.type)}`}>
-                      {ret.ROI != null ? `${parseInt(ret.ROI)}%` : '-'}                      </span>
+                      {ret.ROI != null ? `${parseFloat(ret.ROI)}%` : '-'}                      </span>
                     </td>
                     <td className="py-3 px-4">
                       <StatusBadge status={ret.status === 'active' ? 'paid' : 'pending'} />
