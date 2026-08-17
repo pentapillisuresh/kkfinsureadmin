@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { returnApi } from '../../api/returnApi';
 import { commissionApi } from '../../api/commissionApi';
 import { userApi } from '../../api/userApi';
@@ -12,7 +12,7 @@ import { FaCheckCircle, FaMoneyBillWave, FaTimes, FaWallet, FaHandshake, FaCalen
 import toast from 'react-hot-toast';
 import { adminApi } from '../../api/adminApi';
 
-// ---- AutocompleteInput Component (unchanged) ----
+// ---- AutocompleteInput Component ----
 const AutocompleteInput = ({
   label,
   placeholder,
@@ -141,6 +141,7 @@ const ReturnsAndCommissions = () => {
 
   const [activeTab, setActiveTab] = useState(TAB_ALL_RETURNS);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   // ---- Shared state for users, investments, offers, partners ----
   const [users, setUsers] = useState([]);
@@ -152,6 +153,8 @@ const ReturnsAndCommissions = () => {
   // ---- Returns state ----
   const [returns, setReturns] = useState([]);
   const [returnPagination, setReturnPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
+  const [allReturnsCount, setAllReturnsCount] = useState(0);
+  const [pendingReturnsCount, setPendingReturnsCount] = useState(0);
   const [returnSearch, setReturnSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
 
@@ -198,26 +201,33 @@ const ReturnsAndCommissions = () => {
 
   // ---- Fetch initial data ----
   useEffect(() => {
-    fetchUsers();
-    fetchAllInvestments();
-    fetchOffers();
-    fetchPartners();
+    const fetchInitialData = async () => {
+      await Promise.all([
+        fetchUsers(),
+        fetchAllInvestments(),
+        fetchOffers(),
+        fetchPartners()
+      ]);
+      // After fetching initial data, fetch returns and commissions
+      await fetchAllReturnsData();
+      await fetchCommissions();
+      setInitialLoad(false);
+    };
+    
+    fetchInitialData();
   }, []);
 
   // ---- Fetch data when tab or pagination changes ----
-  // Effect for Returns
   useEffect(() => {
-    if (activeTab === TAB_ALL_RETURNS || activeTab === TAB_PENDING_RETURNS) {
-      fetchReturns();
+    if (!initialLoad) {
+      if (activeTab === TAB_ALL_RETURNS || activeTab === TAB_PENDING_RETURNS) {
+        fetchReturns();
+      }
+      if (activeTab === TAB_ALL_COMMISSIONS || activeTab === TAB_PENDING_COMMISSIONS) {
+        fetchCommissions();
+      }
     }
-  }, [activeTab, returnPagination.page, typeFilter]); // ✅ added page
-
-  // Effect for Commissions
-  useEffect(() => {
-    if (activeTab === TAB_ALL_COMMISSIONS || activeTab === TAB_PENDING_COMMISSIONS) {
-      fetchCommissions();
-    }
-  }, [activeTab, commissionPagination.page, statusFilter]);
+  }, [activeTab, returnPagination.page, returnSearch, typeFilter, commissionPagination.page, commissionSearch, statusFilter, initialLoad]);
 
   // ---- Filter investments when user changes ----
   useEffect(() => {
@@ -280,13 +290,59 @@ const ReturnsAndCommissions = () => {
     }
   };
 
-  // ---- Returns fetch with filters ----
-  const fetchReturns = async () => {
+  // ---- Fetch all returns data to calculate counts ----
+  const fetchAllReturnsData = async () => {
+    try {
+      // Fetch all returns with a large limit to get all data
+      const response = await returnApi.getAll({ 
+        limit: 1000,
+        offset: 0
+      });
+      
+      if (response.success) {
+        const allReturns = response.data.returns || [];
+        
+        // Calculate counts from the data
+        setAllReturnsCount(allReturns.length);
+        
+        // Count pending returns (where paidOn is null or empty)
+        const pendingCount = allReturns.filter(ret => !ret.paidOn).length;
+        setPendingReturnsCount(pendingCount);
+        
+        // Set the returns for the current tab
+        if (isPendingReturnsTab) {
+          const pendingReturns = allReturns.filter(ret => !ret.paidOn);
+          setReturns(pendingReturns);
+          setReturnPagination({
+            total: pendingReturns.length,
+            page: 1,
+            limit: 20,
+            totalPages: Math.ceil(pendingReturns.length / 20)
+          });
+        } else {
+          setReturns(allReturns);
+          setReturnPagination({
+            total: allReturns.length,
+            page: 1,
+            limit: 20,
+            totalPages: Math.ceil(allReturns.length / 20)
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch returns data:', error);
+      toast.error('Failed to fetch returns data');
+    }
+  };
+
+  // ---- Returns fetch with pagination ----
+  const fetchReturns = useCallback(async () => {
     setLoading(true);
+
     try {
       const page = returnPagination.page;
       const limit = returnPagination.limit;
-      const offset = (page - 1) * limit; // ✅ correct offset
+      const offset = (page - 1) * limit;
 
       const params = {
         offset,
@@ -295,41 +351,69 @@ const ReturnsAndCommissions = () => {
         type: typeFilter || undefined,
       };
 
-      if (isPendingReturnsTab) {
-        const now = new Date();
-        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        params.paidOn = 'null';
-        params.monthFrom = previousMonthStart.toISOString();
-        params.monthTo = currentMonthStart.toISOString();
-      }
+      // For pending tab, fetch all and filter client-side
+      const response = await returnApi.getAll({
+        ...params,
+        limit: 1000 // Get all data to filter properly
+      });
 
-      const response = await returnApi.getAll(params);
       if (response.success) {
-        const { total, limit: resLimit, page: resPage } = response.data.pagination;
-        const totalPages = Math.ceil(total / resLimit);
-        setReturns(response.data.returns);
+        let allReturns = response.data.returns || [];
+        
+        // Filter based on tab
+        let filteredReturns = allReturns;
+        let totalCount = allReturns.length;
+        
+        if (isPendingReturnsTab) {
+          filteredReturns = allReturns.filter(ret => !ret.paidOn);
+          totalCount = filteredReturns.length;
+        }
+        
+        // Apply search filter
+        if (returnSearch) {
+          const searchLower = returnSearch.toLowerCase();
+          filteredReturns = filteredReturns.filter(ret => 
+            (ret.user?.fullName && ret.user.fullName.toLowerCase().includes(searchLower)) ||
+            (ret.user?.email && ret.user.email.toLowerCase().includes(searchLower)) ||
+            (ret.user?.batchId && ret.user.batchId.toLowerCase().includes(searchLower)) ||
+            (ret.investmentId && ret.investmentId.toString().toLowerCase().includes(searchLower))
+          );
+          totalCount = filteredReturns.length;
+        }
+        
+        // Apply type filter
+        if (typeFilter) {
+          filteredReturns = filteredReturns.filter(ret => ret.type === typeFilter);
+          totalCount = filteredReturns.length;
+        }
+        
+        // Paginate the results
+        const startIndex = (page - 1) * limit;
+        const paginatedReturns = filteredReturns.slice(startIndex, startIndex + limit);
+        
+        setReturns(paginatedReturns);
         setReturnPagination({
-          total,
-          page: resPage || page,
-          limit: resLimit,
-          totalPages,
+          total: totalCount,
+          page: page,
+          limit: limit,
+          totalPages: Math.ceil(totalCount / limit)
         });
       }
     } catch (error) {
+      console.error('Failed to fetch returns:', error);
       toast.error('Failed to fetch returns');
     } finally {
       setLoading(false);
     }
-  };
+  }, [isPendingReturnsTab, returnPagination.page, returnPagination.limit, returnSearch, typeFilter]);
 
   // ---- Commissions fetch with filters ----
-  const fetchCommissions = async () => {
+  const fetchCommissions = useCallback(async () => {
     setLoading(true);
     try {
       const page = commissionPagination.page;
       const limit = commissionPagination.limit;
-      const offset = (page - 1) * limit; // ✅ correct offset
+      const offset = (page - 1) * limit;
 
       const params = {
         offset,
@@ -339,19 +423,14 @@ const ReturnsAndCommissions = () => {
       };
 
       if (isPendingCommissionsTab) {
-        const now = new Date();
-        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         params.status = 'pending';
-        params.monthFrom = previousMonthStart.toISOString();
-        params.monthTo = currentMonthStart.toISOString();
       }
 
       const response = await commissionApi.getAll(params);
       if (response.success) {
         const { total, limit: resLimit, page: resPage } = response.data.pagination;
         const totalPages = Math.ceil(total / resLimit);
-        setCommissions(response.data.commissions);
+        setCommissions(response.data.commissions || []);
         setCommissionPagination({
           total,
           page: resPage || page,
@@ -364,17 +443,15 @@ const ReturnsAndCommissions = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isPendingCommissionsTab, commissionPagination.page, commissionPagination.limit, commissionSearch, statusFilter]);
 
   // ---- Search handlers ----
   const handleReturnSearch = () => {
     setReturnPagination(prev => ({ ...prev, page: 1 }));
-    // fetch will be triggered by the effect
   };
 
   const handleCommissionSearch = () => {
     setCommissionPagination(prev => ({ ...prev, page: 1 }));
-    // fetch will be triggered by the effect
   };
 
   // ==================== RETURN CRUD ====================
@@ -424,9 +501,10 @@ const ReturnsAndCommissions = () => {
       if (response.success) {
         setShowReturnModal(false);
         resetReturnForm();
-        // Don't fetch here; the effect will handle it when page/type changes.
-        // We can manually trigger by resetting page to 1.
         setReturnPagination(prev => ({ ...prev, page: 1 }));
+        // Refresh counts and data
+        await fetchAllReturnsData();
+        fetchReturns();
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to save return');
@@ -455,6 +533,8 @@ const ReturnsAndCommissions = () => {
       if (response.success) {
         toast.success('Return deleted successfully');
         setReturnPagination(prev => ({ ...prev, page: 1 }));
+        await fetchAllReturnsData();
+        fetchReturns();
       }
     } catch (error) {
       toast.error('Failed to delete return');
@@ -466,7 +546,7 @@ const ReturnsAndCommissions = () => {
       const response = await returnApi.markAsPaid(id);
       if (response.success) {
         toast.success('Return marked as paid');
-        // Refresh current page
+        await fetchAllReturnsData();
         fetchReturns();
       }
     } catch (error) {
@@ -475,15 +555,17 @@ const ReturnsAndCommissions = () => {
   };
 
   const handleBatchMarkReturnPaid = async () => {
-    const ids = returns.filter(r => !r.paidOn)?.map(r => r.id);
-    if (ids.length === 0) {
+    const pendingReturns = returns.filter(r => !r.paidOn);
+    if (pendingReturns.length === 0) {
       toast.error('No pending returns to mark as paid');
       return;
     }
+    const ids = pendingReturns.map(r => r.id);
     try {
       const response = await returnApi.batchMarkAsPaid(ids);
       if (response.success) {
         toast.success(`${response.data.updated} returns marked as paid`);
+        await fetchAllReturnsData();
         fetchReturns();
       }
     } catch (error) {
@@ -604,11 +686,12 @@ const ReturnsAndCommissions = () => {
   };
 
   const handleBatchMarkCommissionPaid = async () => {
-    const ids = commissions.filter(c => c.status === 'pending')?.map(c => c.id);
-    if (ids.length === 0) {
+    const pendingCommissions = commissions.filter(c => c.status === 'pending');
+    if (pendingCommissions.length === 0) {
       toast.error('No pending referral payouts to mark as paid');
       return;
     }
+    const ids = pendingCommissions.map(c => c.id);
     try {
       const response = await commissionApi.batchMarkAsPaid(ids);
       if (response.success) {
@@ -673,9 +756,8 @@ const ReturnsAndCommissions = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  // ==================== MODALS (unchanged) ====================
+  // ==================== MODALS ====================
   const renderReturnModal = () => (
-    // ... (same as before)
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
@@ -697,7 +779,6 @@ const ReturnsAndCommissions = () => {
 
         <form onSubmit={handleReturnSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* User - Autocomplete */}
             <div>
               <AutocompleteInput
                 label="User"
@@ -710,7 +791,6 @@ const ReturnsAndCommissions = () => {
               />
             </div>
 
-            {/* Investment - Dropdown filtered by user */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Investment <span className="text-red-500">*</span>
@@ -725,7 +805,7 @@ const ReturnsAndCommissions = () => {
                 <option value="">Select Investment</option>
                 {filteredInvestments.map(inv => (
                   <option key={inv.id} value={inv.id}>
-                    ₹{parseFloat(inv.amount).toLocaleString()} - {inv.plan?.name || 'N/A'}
+                    ₹{parseFloat(inv.amount).toLocaleString()} - {inv.plan?.name || 'N/A'} (ID: {inv.id})
                   </option>
                 ))}
               </select>
@@ -846,7 +926,6 @@ const ReturnsAndCommissions = () => {
   );
 
   const renderCommissionModal = () => (
-    // ... (same as before)
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
@@ -868,7 +947,6 @@ const ReturnsAndCommissions = () => {
 
         <form onSubmit={handleCommissionSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Partner - Autocomplete */}
             <div>
               <AutocompleteInput
                 label="Partner"
@@ -1070,7 +1148,6 @@ const ReturnsAndCommissions = () => {
     );
   };
 
-
   // ==================== TABLE RENDER FUNCTIONS ====================
   const renderReturnTable = () => (
     <>
@@ -1080,7 +1157,7 @@ const ReturnsAndCommissions = () => {
             value={returnSearch}
             onChange={setReturnSearch}
             onSearch={handleReturnSearch}
-            placeholder="Search returns by user..."
+            placeholder="Search returns by user or investment ID..."
             className="flex-1"
           />
           <select
@@ -1125,8 +1202,9 @@ const ReturnsAndCommissions = () => {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">User</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">UserID</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Investment</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">User ID</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Investment ID</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Investment Amount</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Month</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
@@ -1138,14 +1216,14 @@ const ReturnsAndCommissions = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8">
+                  <td colSpan="10" className="text-center py-8">
                     <LoadingSpinner />
                   </td>
                 </tr>
               ) : returns.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-gray-500">
-                    No returns found
+                  <td colSpan="10" className="text-center py-8 text-gray-500">
+                    {isPendingReturnsTab ? 'No pending returns found' : 'No returns found'}
                   </td>
                 </tr>
               ) : (
@@ -1157,6 +1235,9 @@ const ReturnsAndCommissions = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="text-sm font-medium text-gray-900">{ret.user?.batchId || 'N/A'}</div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-sm font-medium text-gray-900">#{ret.investmentId || 'N/A'}</div>
                     </td>
                     <td className="py-3 px-4 text-sm">
                       ₹{parseFloat(ret.investment?.amount || 0).toLocaleString()}
@@ -1174,10 +1255,11 @@ const ReturnsAndCommissions = () => {
                     </td>
                     <td className="py-3 px-4">
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${renderReturnTypeBadge(ret.type)}`}>
-                      {ret.ROI != null ? `${parseFloat(ret.ROI)}%` : '-'}                      </span>
+                        {ret.ROI != null ? `${parseFloat(ret.ROI)}%` : '-'}
+                      </span>
                     </td>
                     <td className="py-3 px-4">
-                      <StatusBadge status={ret.status === 'active' ? 'paid' : 'pending'} />
+                      <StatusBadge status={ret.paidOn ? 'paid' : 'pending'} />
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -1292,7 +1374,7 @@ const ReturnsAndCommissions = () => {
               ) : commissions.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="text-center py-8 text-gray-500">
-                    No payouts found
+                    {isPendingCommissionsTab ? 'No pending payouts found' : 'No payouts found'}
                   </td>
                 </tr>
               ) : (
@@ -1386,7 +1468,7 @@ const ReturnsAndCommissions = () => {
             <FaWallet className="w-4 h-4" />
             All Returns
             <span className="bg-gray-100 text-gray-600 ml-2 px-2 py-0.5 rounded-full text-xs">
-              {returnPagination.total}
+              {allReturnsCount}
             </span>
           </button>
 
@@ -1401,7 +1483,7 @@ const ReturnsAndCommissions = () => {
             <FaCalendarCheck className="w-4 h-4" />
             Pending Returns
             <span className="bg-gray-100 text-gray-600 ml-2 px-2 py-0.5 rounded-full text-xs">
-              {returnPagination.total}
+              {pendingReturnsCount}
             </span>
           </button>
 
