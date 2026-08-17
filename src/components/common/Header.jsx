@@ -36,7 +36,7 @@ const Header = ({ toggleSidebar }) => {
             >
               <FaUserCircle className="text-gray-600 text-2xl" />
               <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                {user?.fullName || 'Admin'}
+                {user?.fullName || 'Chief Administrator'}
               </span>
             </button>
 
