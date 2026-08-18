@@ -383,13 +383,9 @@ const ReferralsList = () => {
                       }
                     </td>
                     <td className="py-3 px-4 text-sm">
-                      {ref.offer ? (
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs truncate max-w-[100px]">{ref.rewardPoints}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-xs">No offer</span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs truncate max-w-[100px]">{ref.rewardPoints}</span>
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-sm">
                       {ref.offer ? (

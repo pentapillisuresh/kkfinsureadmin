@@ -4,7 +4,7 @@ import SearchBar from '../../components/common/SearchBar';
 import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { FaEye, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaEye, FaCheckCircle,FaTimes, FaTimesCircle } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const TicketsList = () => {

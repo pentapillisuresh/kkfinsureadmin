@@ -13,7 +13,7 @@ const DocumentsList = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadData, setUploadData] = useState({ title: '', type: 'other', userId: '' });
+  const [uploadData, setUploadData] = useState({ title: '', type: 'other' });
 
   useEffect(() => {
     fetchDocuments();
@@ -52,16 +52,13 @@ const DocumentsList = () => {
     formData.append('file', selectedFile);
     formData.append('title', uploadData.title);
     formData.append('type', uploadData.type);
-    if (uploadData.userId) {
-      formData.append('userId', uploadData.userId);
-    }
 
     try {
       const response = await documentApi.upload(formData);
       if (response.success) {
         toast.success('Document uploaded successfully');
         setSelectedFile(null);
-        setUploadData({ title: '', type: 'other', userId: '' });
+        setUploadData({ title: '', type: 'other' });
         fetchDocuments();
       }
     } catch (error) {
@@ -90,11 +87,17 @@ const DocumentsList = () => {
     return <FaFileAlt className="text-gray-500" />;
   };
 
-  const filteredDocs = documents.filter(
-    (doc) =>
-      doc.title.toLowerCase().includes(search.toLowerCase()) ||
-      doc.type.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredDocs = documents.filter((doc) => {
+    const searchTerm = search.toLowerCase();
+
+    return (
+      doc.title?.toLowerCase().includes(searchTerm) ||
+      doc.type?.toLowerCase().includes(searchTerm) ||
+      doc.user?.fullName?.toLowerCase().includes(searchTerm) ||
+      doc.user?.email?.toLowerCase().includes(searchTerm) ||
+      doc.batchId?.toLowerCase().includes(searchTerm)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -139,16 +142,6 @@ const DocumentsList = () => {
                 required
               />
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">User ID (Optional)</label>
-            <input
-              type="text"
-              value={uploadData.userId}
-              onChange={(e) => setUploadData({ ...uploadData, userId: e.target.value })}
-              className="input-field"
-              placeholder="Leave empty for company documents"
-            />
           </div>
           <button
             type="submit"
@@ -206,7 +199,22 @@ const DocumentsList = () => {
 
               <div className="mt-3 text-xs text-gray-500">
                 <p>Uploaded by: {doc.uploader?.fullName || 'System'}</p>
-                <p>{new Date(doc.createdAt).toLocaleDateString()}</p>
+                {/* User Information */}
+                {doc.user && (
+                  <>
+                    <p>
+                      Full Name: {doc.user?.fullName || 'N/A'}
+                    </p>
+
+                    <p>
+                      Email: {doc.user?.email || 'N/A'}
+                    </p>
+
+                    <p>
+                      Batch ID: {doc.user?.batchId || 'N/A'}
+                    </p>
+                  </>
+                )}                <p>{new Date(doc.createdAt).toLocaleDateString()}</p>
               </div>
 
               <div className="mt-4 flex items-center gap-2">

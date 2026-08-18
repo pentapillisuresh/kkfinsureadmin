@@ -3,18 +3,26 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { adminApi } from '../../api/adminApi';
 import { nomineeApi } from '../../api/nomineeApi';
+import { authApi } from '../../api/authApi';
 import { documentApi } from '../../api/documentApi';
 import { filesAPI } from '../../api/files';
-import { FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiCreditCard, FiUserPlus, FiLock, FiEdit, FiToggleRight, FiToggleLeft, FiDownload, FiFileText, FiAward, FiPieChart, FiDollarSign, FiClock, FiCheckCircle, FiXCircle, FiLink, FiImage, FiFile, FiActivity, FiUsers, FiBriefcase, FiStar, FiX, FiUpload, FiTrash2, FiAlertCircle, FiBook, FiGlobe, FiHash} from 'react-icons/fi';
+import {
+  FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiMapPin,
+  FiCreditCard, FiUserPlus, FiLock, FiEdit, FiToggleRight, FiToggleLeft,
+  FiDownload, FiFileText, FiAward, FiPieChart, FiDollarSign, FiClock,
+  FiCheckCircle, FiXCircle, FiLink, FiImage, FiFile, FiActivity,
+  FiUsers, FiBriefcase, FiStar, FiX, FiUpload, FiTrash2, FiAlertCircle,
+  FiBook, FiGlobe, FiHash
+} from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
 import { formatDate, getStatusColor, getInitials } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
-const VITE_BASE_URL="https://service.kkfinsure.org/"
-// const VITE_BASE_URL="http://localhost:3000/"
+// const VITE_BASE_URL = "http://localhost:3000/";
+const VITE_BASE_URL = "http://service.kkfinsure.org/";
 
 // ============================================================
-// Edit Profile Modal
+// Edit Profile Modal (unchanged)
 // ============================================================
 const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
@@ -52,7 +60,6 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     let finalValue = type === 'checkbox' ? checked : value;
-    // Convert PAN to uppercase
     if (name === 'pan') finalValue = value.toUpperCase();
     setFormData(prev => ({
       ...prev,
@@ -92,13 +99,13 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
               </label>
               <div className="relative group">
                 <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="fullName" 
-                  value={formData.fullName} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
-                  required 
+                  required
                   placeholder="John Doe"
                 />
               </div>
@@ -109,13 +116,13 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
               </label>
               <div className="relative group">
                 <FiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="tel" 
-                  name="phone" 
-                  value={formData.phone} 
-                  onChange={handleChange} 
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
-                  required 
+                  required
                   placeholder="9876543210"
                 />
               </div>
@@ -126,11 +133,11 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
               </label>
               <div className="relative group">
                 <FiCalendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="date" 
-                  name="dateOfBirth" 
-                  value={formData.dateOfBirth} 
-                  onChange={handleChange} 
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  value={formData.dateOfBirth}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
                 />
               </div>
@@ -141,11 +148,11 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
               </label>
               <div className="relative group">
                 <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="batchId" 
-                  value={formData.batchId} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="batchId"
+                  value={formData.batchId}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
                   placeholder="BATCH-001"
                 />
@@ -157,11 +164,11 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
               </label>
               <div className="relative group">
                 <FiCreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="pan" 
-                  value={formData.pan} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="pan"
+                  value={formData.pan}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm uppercase transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
                   placeholder="ABCDE1234F"
                   maxLength={10}
@@ -174,11 +181,11 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
               </label>
               <div className="relative group">
                 <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="aadhar" 
-                  value={formData.aadhar} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="aadhar"
+                  value={formData.aadhar}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
                   placeholder="123456789012"
                   maxLength={12}
@@ -192,33 +199,33 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
             </label>
             <div className="relative group">
               <FiMapPin className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
-              <textarea 
-                name="address" 
-                value={formData.address} 
-                onChange={handleChange} 
+              <textarea
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10 min-h-[80px] resize-y"
-                rows="2" 
+                rows="2"
                 placeholder="123 Main St, City, State, Country"
               />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-6">
             <label className="flex items-center gap-2.5 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                name="isSeniorCitizen" 
-                checked={formData.isSeniorCitizen} 
-                onChange={handleChange} 
+              <input
+                type="checkbox"
+                name="isSeniorCitizen"
+                checked={formData.isSeniorCitizen}
+                onChange={handleChange}
                 className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer transition-all"
               />
               <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Senior Citizen</span>
             </label>
             <label className="flex items-center gap-2.5 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                name="isActive" 
-                checked={formData.isActive} 
-                onChange={handleChange} 
+              <input
+                type="checkbox"
+                name="isActive"
+                checked={formData.isActive}
+                onChange={handleChange}
                 className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer transition-all"
               />
               <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Active</span>
@@ -229,10 +236,10 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                 Partner Type
               </label>
-              <select 
-                name="partnerType" 
-                value={formData.partnerType} 
-                onChange={handleChange} 
+              <select
+                name="partnerType"
+                value={formData.partnerType}
+                onChange={handleChange}
                 className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10 appearance-none cursor-pointer"
               >
                 <option value="none">None</option>
@@ -247,13 +254,13 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
               </label>
               <div className="relative group">
                 <FiDollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="number" 
-                  name="partnerCommissionRate" 
-                  value={formData.partnerCommissionRate} 
-                  onChange={handleChange} 
+                <input
+                  type="number"
+                  name="partnerCommissionRate"
+                  value={formData.partnerCommissionRate}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
-                  min="0" 
+                  min="0"
                   step="0.1"
                   placeholder="0.00"
                 />
@@ -276,7 +283,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
 };
 
 // ============================================================
-// Edit Nominee Modal
+// Edit Nominee Modal (supports both create and update)
 // ============================================================
 const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
@@ -299,6 +306,18 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
         email: nominee.email || '',
         address: nominee.address || '',
         documentPath: nominee.documentPath || '',
+        documentFile: null,
+        documentPreview: null,
+      });
+    } else {
+      // Reset when opening for creation
+      setFormData({
+        fullName: '',
+        relation: '',
+        phone: '',
+        email: '',
+        address: '',
+        documentPath: '',
         documentFile: null,
         documentPreview: null,
       });
@@ -337,9 +356,7 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
     e.preventDefault();
     let docPath = formData.documentPath;
     if (formData.documentFile) {
-      const fd = new FormData();
-      fd.append('file', formData.documentFile, formData.documentFile.name);
-      const uploadRes = await filesAPI.uploadSingle(fd);
+      const uploadRes = await filesAPI.uploadSingle(formData.documentFile);
       if (uploadRes.data.success) {
         docPath = uploadRes.data.data.filePath;
       } else {
@@ -360,8 +377,8 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
               <FiUserPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-800">Edit Nominee</h3>
-              <p className="text-xs text-gray-500">Update nominee information</p>
+              <h3 className="text-lg font-bold text-gray-800">{nominee ? 'Edit Nominee' : 'Add Nominee'}</h3>
+              <p className="text-xs text-gray-500">{nominee ? 'Update nominee information' : 'Add a new nominee'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-110">
@@ -372,34 +389,34 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Full Name <span className="text-red-500">*</span>
+                Full Name {!nominee && <span className="text-red-500">*</span>}
               </label>
               <div className="relative group">
                 <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="fullName" 
-                  value={formData.fullName} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10"
-                  required 
+                  required={!nominee}
                   placeholder="Jane Doe"
                 />
               </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Relation <span className="text-red-500">*</span>
+                Relation {!nominee && <span className="text-red-500">*</span>}
               </label>
               <div className="relative group">
                 <FiUsers className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="relation" 
-                  value={formData.relation} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="relation"
+                  value={formData.relation}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10"
-                  required 
+                  required={!nominee}
                   placeholder="Spouse, Son, Daughter"
                 />
               </div>
@@ -410,11 +427,11 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
               </label>
               <div className="relative group">
                 <FiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="tel" 
-                  name="phone" 
-                  value={formData.phone} 
-                  onChange={handleChange} 
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10"
                   placeholder="9876543210"
                 />
@@ -426,11 +443,11 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
               </label>
               <div className="relative group">
                 <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="email" 
-                  name="email" 
-                  value={formData.email} 
-                  onChange={handleChange} 
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10"
                   placeholder="jane@example.com"
                 />
@@ -443,12 +460,12 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
             </label>
             <div className="relative group">
               <FiMapPin className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200" size={18} />
-              <textarea 
-                name="address" 
-                value={formData.address} 
-                onChange={handleChange} 
+              <textarea
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/10 min-h-[80px] resize-y"
-                rows="2" 
+                rows="2"
                 placeholder="Nominee's address"
               />
             </div>
@@ -499,7 +516,7 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
             </button>
             <button type="submit" disabled={isLoading} className="flex-1 px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2">
               {isLoading ? <FaSpinner className="animate-spin" /> : null}
-              {isLoading ? 'Updating...' : 'Update Nominee'}
+              {isLoading ? 'Saving...' : nominee ? 'Update Nominee' : 'Add Nominee'}
             </button>
           </div>
         </form>
@@ -509,7 +526,7 @@ const EditNomineeModal = ({ isOpen, onClose, nominee, userId, onSubmit, isLoadin
 };
 
 // ============================================================
-// Edit Bank Modal
+// Edit Bank Modal (supports both create and update)
 // ============================================================
 const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
@@ -532,6 +549,16 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
         branch: bank.branch || '',
         accountType: bank.accountType || 'savings',
         isVerified: bank.isVerified || false,
+      });
+    } else {
+      setFormData({
+        accountHolderName: '',
+        bankName: '',
+        accountNumber: '',
+        ifscCode: '',
+        branch: '',
+        accountType: 'savings',
+        isVerified: false,
       });
     }
   }, [bank]);
@@ -562,8 +589,8 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
               <FiCreditCard className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-800">Edit Bank Details</h3>
-              <p className="text-xs text-gray-500">Update bank account information</p>
+              <h3 className="text-lg font-bold text-gray-800">{bank ? 'Edit Bank Details' : 'Add Bank Details'}</h3>
+              <p className="text-xs text-gray-500">{bank ? 'Update bank account information' : 'Add new bank details'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-110">
@@ -578,13 +605,13 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
               </label>
               <div className="relative group">
                 <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="accountHolderName" 
-                  value={formData.accountHolderName} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="accountHolderName"
+                  value={formData.accountHolderName}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
-                  required 
+                  required
                   placeholder="John Doe"
                 />
               </div>
@@ -595,13 +622,13 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
               </label>
               <div className="relative group">
                 <FiBook className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="bankName" 
-                  value={formData.bankName} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="bankName"
+                  value={formData.bankName}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
-                  required 
+                  required
                   placeholder="State Bank of India"
                 />
               </div>
@@ -612,13 +639,13 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
               </label>
               <div className="relative group">
                 <FiCreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="accountNumber" 
-                  value={formData.accountNumber} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="accountNumber"
+                  value={formData.accountNumber}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
-                  required 
+                  required
                   placeholder="123456789012"
                 />
               </div>
@@ -629,13 +656,13 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
               </label>
               <div className="relative group">
                 <FiGlobe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="ifscCode" 
-                  value={formData.ifscCode} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="ifscCode"
+                  value={formData.ifscCode}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm uppercase transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
-                  required 
+                  required
                   placeholder="SBIN0001234"
                   maxLength={11}
                 />
@@ -647,11 +674,11 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
               </label>
               <div className="relative group">
                 <FiMapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200" size={18} />
-                <input 
-                  type="text" 
-                  name="branch" 
-                  value={formData.branch} 
-                  onChange={handleChange} 
+                <input
+                  type="text"
+                  name="branch"
+                  value={formData.branch}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10"
                   placeholder="Main Branch"
                 />
@@ -661,10 +688,10 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                 Account Type
               </label>
-              <select 
-                name="accountType" 
-                value={formData.accountType} 
-                onChange={handleChange} 
+              <select
+                name="accountType"
+                value={formData.accountType}
+                onChange={handleChange}
                 className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/10 appearance-none cursor-pointer"
               >
                 <option value="savings">Savings</option>
@@ -674,11 +701,11 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
             </div>
           </div>
           <label className="flex items-center gap-2.5 cursor-pointer group">
-            <input 
-              type="checkbox" 
-              name="isVerified" 
-              checked={formData.isVerified} 
-              onChange={handleChange} 
+            <input
+              type="checkbox"
+              name="isVerified"
+              checked={formData.isVerified}
+              onChange={handleChange}
               className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer transition-all"
             />
             <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Mark as Verified</span>
@@ -689,7 +716,7 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
             </button>
             <button type="submit" disabled={isLoading} className="flex-1 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2">
               {isLoading ? <FaSpinner className="animate-spin" /> : null}
-              {isLoading ? 'Updating...' : 'Update Bank'}
+              {isLoading ? 'Saving...' : bank ? 'Update Bank' : 'Add Bank'}
             </button>
           </div>
         </form>
@@ -699,7 +726,7 @@ const EditBankModal = ({ isOpen, onClose, bank, userId, onSubmit, isLoading }) =
 };
 
 // ============================================================
-// Edit Documents Modal (PAN & Aadhar)
+// Edit Documents Modal (PAN & Aadhar) - for replacement
 // ============================================================
 const EditDocumentsModal = ({ isOpen, onClose, documents, userId, onSubmit, isLoading }) => {
   const [panFile, setPanFile] = useState(null);
@@ -741,16 +768,12 @@ const EditDocumentsModal = ({ isOpen, onClose, documents, userId, onSubmit, isLo
     let panPath = existingPan;
     let aadharPath = existingAadhar;
     if (panFile) {
-      const fd = new FormData();
-      fd.append('file', panFile, panFile.name);
-      const res = await filesAPI.uploadSingle(fd);
+      const res = await filesAPI.uploadSingle(panFile);
       if (res.data.success) panPath = res.data.data.filePath;
       else toast.warning('PAN upload failed, keeping old');
     }
     if (aadharFile) {
-      const fd = new FormData();
-      fd.append('file', aadharFile, aadharFile.name);
-      const res = await filesAPI.uploadSingle(fd);
+      const res = await filesAPI.uploadSingle(aadharFile);
       if (res.data.success) aadharPath = res.data.data.filePath;
       else toast.warning('Aadhar upload failed, keeping old');
     }
@@ -879,6 +902,485 @@ const EditDocumentsModal = ({ isOpen, onClose, documents, userId, onSubmit, isLo
 };
 
 // ============================================================
+// Add Single Document Modal (PAN or Aadhar)
+// ============================================================
+const AddDocumentModal = ({ isOpen, onClose, title, onUpload, isLoading }) => {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(selectedFile.type)) {
+      toast.error('Only images and PDFs allowed');
+      return;
+    }
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      toast.error('Max size 10MB');
+      return;
+    }
+    setFile(selectedFile);
+    setPreview(selectedFile.type.startsWith('image/') ? URL.createObjectURL(selectedFile) : selectedFile.name);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!file) {
+      toast.error('Please select a file');
+      return;
+    }
+    onUpload(file);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold">Upload {title}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
+            <FiX className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Select {title} (JPEG, PNG, PDF)</label>
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+              onChange={handleFileChange}
+              className="mt-2 w-full p-2 border-2 border-dashed border-gray-300 rounded-xl focus:border-blue-400 transition-all"
+            />
+            {preview && (
+              <div className="mt-2 p-2 bg-gray-50 rounded-lg flex items-center gap-2">
+                {preview.startsWith('data:image') || preview.startsWith('blob:') ? (
+                  <img src={preview} alt={title} className="h-12 w-12 object-cover rounded-lg" />
+                ) : (
+                  <FiFile className="text-gray-500 w-5 h-5" />
+                )}
+                <span className="text-sm text-gray-600 truncate">{file?.name}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 btn-secondary">Cancel</button>
+            <button type="submit" disabled={isLoading} className="flex-1 btn-primary flex items-center justify-center gap-2">
+              {isLoading ? <FaSpinner className="animate-spin" /> : null}
+              {isLoading ? 'Uploading...' : 'Upload'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// Tab Components
+// ============================================================
+
+const ProfileTab = ({ user, onEdit }) => (
+  <div>
+    <div className="flex justify-between items-center mb-6">
+      <h3 className="font-semibold text-gray-700 text-lg">Profile Details</h3>
+      <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center gap-2 text-sm">
+        <FiEdit className="w-4 h-4" /> Edit
+      </button>
+    </div>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-gray-500 flex items-center gap-2"><FiUser className="text-blue-500" /> Personal</h4>
+          <DetailItem label="Full Name" value={user.fullName} />
+          <DetailItem label="Email" value={user.email} />
+          <DetailItem label="Phone" value={user.phone || 'N/A'} />
+          <DetailItem label="Date of Birth" value={user.dateOfBirth ? formatDate(user.dateOfBirth) : 'N/A'} />
+          <DetailItem label="Senior Citizen" value={user.isSeniorCitizen ? 'Yes' : 'No'} />
+        </div>
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-gray-500 flex items-center gap-2"><FiMapPin className="text-green-500" /> Address & ID</h4>
+          <DetailItem label="Address" value={user.address || 'Not provided'} />
+          <DetailItem label="PAN" value={user.pan || 'Not provided'} />
+          <DetailItem label="Aadhar" value={user.aadhar || 'Not provided'} />
+          <DetailItem label="Batch ID" value={user.batchId || 'N/A'} />
+          <DetailItem label="Partner Type" value={user.partnerType || 'None'} />
+          <DetailItem label="Commission Rate" value={`${user.partnerCommissionRate || 0}%`} />
+        </div>
+      </div>
+      <div className="border-t pt-4">
+        <h4 className="text-sm font-medium text-gray-500 flex items-center gap-2"><FiLock className="text-red-500" /> Account Info</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+          <DetailItem label="Created By" value={user.creator?.fullName || 'System'} />
+          <DetailItem label="Member Since" value={formatDate(user.createdAt)} />
+          <DetailItem label="Last Updated" value={formatDate(user.updatedAt)} />
+          <DetailItem label="Status" value={user.isActive ? 'Active' : 'Inactive'} />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const NomineeTab = ({ nominee, onEdit, onCreate }) => {
+  if (!nominee) {
+    return (
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <FiUserPlus className="w-8 h-8 text-gray-300" />
+        </div>
+        <p className="text-gray-500 font-medium">No nominee added</p>
+        <p className="text-sm text-gray-400 mt-1">Add nominee information</p>
+        <button
+          onClick={onCreate}
+          className="mt-4 px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg shadow-orange-500/30 flex items-center gap-2 mx-auto"
+        >
+          <FiUserPlus className="w-4 h-4" /> Add Nominee
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-semibold text-gray-700 text-lg">Nominee Details</h3>
+        <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg shadow-orange-500/30 flex items-center gap-2 text-sm">
+          <FiEdit className="w-4 h-4" /> Edit
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DetailItem label="Full Name" value={nominee.fullName} />
+        <DetailItem label="Relation" value={nominee.relation} />
+        <DetailItem label="Phone" value={nominee.phone || 'N/A'} />
+        <DetailItem label="Email" value={nominee.email || 'N/A'} />
+        <DetailItem label="Address" value={nominee.address || 'Not provided'} />
+        <DetailItem label="Document" value={nominee.documentPath ? 'Uploaded' : 'Not uploaded'} />
+      </div>
+    </div>
+  );
+};
+
+const BankTab = ({ bank, onEdit, onCreate }) => {
+  if (!bank) {
+    return (
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <FiCreditCard className="w-8 h-8 text-gray-300" />
+        </div>
+        <p className="text-gray-500 font-medium">No bank details added</p>
+        <p className="text-sm text-gray-400 mt-1">Add bank information</p>
+        <button
+          onClick={onCreate}
+          className="mt-4 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-purple-500/30 flex items-center gap-2 mx-auto"
+        >
+          <FiCreditCard className="w-4 h-4" /> Add Bank Details
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-semibold text-gray-700 text-lg">Bank Details</h3>
+        <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-purple-500/30 flex items-center gap-2 text-sm">
+          <FiEdit className="w-4 h-4" /> Edit
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DetailItem label="Account Holder" value={bank.accountHolderName} />
+        <DetailItem label="Bank Name" value={bank.bankName} />
+        <DetailItem label="Account Number" value={bank.accountNumber} />
+        <DetailItem label="IFSC Code" value={bank.ifscCode} />
+        <DetailItem label="Branch" value={bank.branch || 'N/A'} />
+        <DetailItem label="Account Type" value={bank.accountType || 'Savings'} />
+        <DetailItem label="Verified" value={bank.isVerified ? 'Yes' : 'No'} />
+      </div>
+    </div>
+  );
+};
+
+const DocumentsTab = ({ documents, onEdit, onAddPan, onAddAadhar, onUpdatePan, onUpdateAadhar }) => {
+  const panDoc = documents?.find(d => d.title === 'PAN Card');
+  const aadharDoc = documents?.find(d => d.title === 'Aadhar Card');
+
+  const handleFileChange = (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only images and PDFs allowed');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Max size 10MB');
+      return;
+    }
+    if (type === 'pan' && panDoc) {
+      onUpdatePan(panDoc.id, file);
+    } else if (type === 'aadhar' && aadharDoc) {
+      onUpdateAadhar(aadharDoc.id, file);
+    }
+    e.target.value = '';
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-semibold text-gray-700 text-lg">KYC Documents</h3>
+        {/* <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center gap-2 text-sm">
+          <FiEdit className="w-4 h-4" /> Edit Both
+        </button> */}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* PAN Card */}
+        <div className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300">
+          <div className="flex justify-between items-start">
+            <p className="text-sm font-medium text-gray-700">PAN Card</p>
+            {panDoc ? (
+              <label className="cursor-pointer text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                <FiEdit className="w-3.5 h-3.5" /> Update
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                  onChange={(e) => handleFileChange(e, 'pan')}
+                />
+              </label>
+            ) : (
+              <button onClick={onAddPan} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                <FiUpload className="w-3.5 h-3.5" /> Upload
+              </button>
+            )}
+          </div>
+          {panDoc ? (
+            <div className="mt-3 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
+              <FiFileText className="text-green-500" />
+              <span className="text-sm text-gray-600 truncate flex-1">{panDoc.filePath}</span>
+              <a href={`${VITE_BASE_URL}${panDoc.filePath}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 mt-2">Not uploaded</p>
+          )}
+        </div>
+
+        {/* Aadhar Card */}
+        <div className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300">
+          <div className="flex justify-between items-start">
+            <p className="text-sm font-medium text-gray-700">Aadhar Card</p>
+            {aadharDoc ? (
+              <label className="cursor-pointer text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                <FiEdit className="w-3.5 h-3.5" /> Update
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                  onChange={(e) => handleFileChange(e, 'aadhar')}
+                />
+              </label>
+            ) : (
+              <button onClick={onAddAadhar} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                <FiUpload className="w-3.5 h-3.5" /> Upload
+              </button>
+            )}
+          </div>
+          {aadharDoc ? (
+            <div className="mt-3 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
+              <FiFileText className="text-green-500" />
+              <span className="text-sm text-gray-600 truncate flex-1">{aadharDoc.filePath}</span>
+              <a href={`${VITE_BASE_URL}${aadharDoc.filePath}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 mt-2">Not uploaded</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const InvestmentsTab = ({ investments }) => {
+  const totalAmount = investments?.reduce((sum, inv) => sum + parseFloat(inv.amount), 0) || 0;
+  const activeCount = investments?.filter(inv => inv.status === 'active').length || 0;
+  const maturedCount = investments?.filter(inv => inv.status === 'matured').length || 0;
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 rounded-xl border border-blue-200/50">
+          <p className="text-sm text-blue-600 font-medium">Total Investments</p>
+          <p className="text-2xl font-bold text-blue-700">{investments?.length || 0}</p>
+        </div>
+        <div className="bg-gradient-to-br from-green-50 to-green-100/50 p-4 rounded-xl border border-green-200/50">
+          <p className="text-sm text-green-600 font-medium">Active</p>
+          <p className="text-2xl font-bold text-green-700">{activeCount}</p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 rounded-xl border border-purple-200/50">
+          <p className="text-sm text-purple-600 font-medium">Matured</p>
+          <p className="text-2xl font-bold text-purple-700">{maturedCount}</p>
+        </div>
+      </div>
+
+      {investments?.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 rounded-xl">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Investment Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Maturity Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {investments.map((inv, index) => (
+                <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium">{inv.plan?.name || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-gray-900">₹{parseFloat(inv.amount).toLocaleString()}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(inv.status)}`}>
+                      {inv.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(inv.investmentDate)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(inv.maturityDate)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <FiPieChart className="w-8 h-8 text-gray-300" />
+          </div>
+          <p className="text-gray-500 font-medium">No investments found</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ReturnsTab = ({ returns }) => {
+  const totalReturns = returns?.reduce((sum, r) => sum + parseFloat(r.amount), 0) || 0;
+  const monthlyTotal = returns?.filter(r => r.type === 'monthly').reduce((sum, r) => sum + parseFloat(r.amount), 0) || 0;
+  const bonusTotal = returns?.filter(r => r.type === 'annual_bonus').reduce((sum, r) => sum + parseFloat(r.amount), 0) || 0;
+  const offerTotal = returns?.filter(r => r.type === 'offer').reduce((sum, r) => sum + parseFloat(r.amount), 0) || 0;
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 rounded-xl border border-blue-200/50">
+          <p className="text-sm text-blue-600 font-medium">Total Returns</p>
+          <p className="text-2xl font-bold text-blue-700">₹{totalReturns.toLocaleString()}</p>
+        </div>
+        <div className="bg-gradient-to-br from-green-50 to-green-100/50 p-4 rounded-xl border border-green-200/50">
+          <p className="text-sm text-green-600 font-medium">Monthly</p>
+          <p className="text-2xl font-bold text-green-700">₹{monthlyTotal.toLocaleString()}</p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 rounded-xl border border-purple-200/50">
+          <p className="text-sm text-purple-600 font-medium">Annual Bonus</p>
+          <p className="text-2xl font-bold text-purple-700">₹{bonusTotal.toLocaleString()}</p>
+        </div>
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 p-4 rounded-xl border border-orange-200/50">
+          <p className="text-sm text-orange-600 font-medium">Offer</p>
+          <p className="text-2xl font-bold text-orange-700">₹{offerTotal.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {returns?.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 rounded-xl">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Month</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {returns.map((ret, index) => (
+                <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(ret.month)}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-gray-900">₹{parseFloat(ret.amount).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-sm capitalize text-gray-600">{ret.type?.replace('_', ' ') || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{ret.description || '-'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${ret.paidOn ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      {ret.paidOn ? 'Paid' : 'Pending'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <FiDollarSign className="w-8 h-8 text-gray-300" />
+          </div>
+          <p className="text-gray-500 font-medium">No returns found</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const HistoryTab = ({ user }) => (
+  <div className="space-y-4">
+    <div className="border-l-4 border-blue-500 pl-4 py-3 bg-blue-50/30 rounded-r-lg">
+      <p className="text-sm text-gray-600">Created: <span className="font-medium">{formatDate(user.createdAt)}</span></p>
+      <p className="text-sm text-gray-600">Last Updated: <span className="font-medium">{formatDate(user.updatedAt)}</span></p>
+    </div>
+    <div className="space-y-3">
+      <h3 className="font-semibold text-gray-700 flex items-center gap-2"><FiActivity className="text-blue-500" /> Activity Log</h3>
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 text-sm p-3 bg-gray-50 rounded-lg">
+          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <span className="text-gray-700">User registered</span>
+          <span className="text-gray-400 ml-auto">{formatDate(user.createdAt)}</span>
+        </div>
+        {user.investments?.map((inv, index) => (
+          <div key={index} className="flex items-center gap-3 text-sm p-3 bg-gray-50 rounded-lg">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <span className="text-gray-700">Investment of ₹{parseFloat(inv.amount).toLocaleString()} in {inv.plan?.name || 'N/A'}</span>
+            <span className="text-gray-400 ml-auto">{formatDate(inv.investmentDate)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// ============================================================
+// Detail Item Component
+// ============================================================
+const DetailItem = ({ label, value, icon: Icon }) => {
+  if (!value || value === 'N/A' || value === '' || value === 'Not provided' || value === 'None') {
+    return (
+      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl transition-all duration-200 hover:bg-gray-100/70">
+        <div className="flex-1">
+          <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
+          <p className="text-sm text-gray-400">Not provided</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30 transition-all duration-200">
+      {Icon && <Icon className="text-gray-400 mt-0.5 w-4 h-4" />}
+      <div className="flex-1">
+        <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
+        <p className="text-sm font-medium text-gray-800">{value}</p>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
 // Main Component
 // ============================================================
 const UserDetails = () => {
@@ -893,6 +1395,10 @@ const UserDetails = () => {
   const [showNomineeModal, setShowNomineeModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
+
+  // Add modals state
+  const [showAddPanModal, setShowAddPanModal] = useState(false);
+  const [showAddAadharModal, setShowAddAadharModal] = useState(false);
 
   useEffect(() => {
     fetchUserDetails();
@@ -939,20 +1445,31 @@ const UserDetails = () => {
     setUpdating(true);
     try {
       const nomineeId = user?.nominee?.id;
-      if (!nomineeId) {
-        toast.error('No nominee found for this user');
-        return;
+      let response;
+      if (nomineeId) {
+        response = await nomineeApi.update(nomineeId, formData);
+      } else {
+        // Create nominee
+        const payload = {
+          userId: user.id,
+          fullName: formData.fullName,
+          relation: formData.relation,
+          phone: formData.phone || undefined,
+          email: formData.email || undefined,
+          address: formData.address || undefined,
+          documentPath: formData.documentPath || undefined
+        };
+        response = await nomineeApi.create(payload);
       }
-      const response = await nomineeApi.update(nomineeId, formData);
       if (response.success) {
-        toast.success('Nominee updated successfully');
+        toast.success(nomineeId ? 'Nominee updated' : 'Nominee added');
         setShowNomineeModal(false);
         await fetchUserDetails();
       } else {
         toast.error(response.message || 'Update failed');
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Update failed');
+      toast.error(error.response?.data?.message || 'Operation failed');
     } finally {
       setUpdating(false);
     }
@@ -961,14 +1478,41 @@ const UserDetails = () => {
   const handleUpdateBank = async (formData) => {
     setUpdating(true);
     try {
-      const response = await adminApi.upsertBankDetails(user.id, formData);
+      const response = await authApi.upsertBankDetails({
+        userId: user.id,
+        ...formData
+      });
       if (response.success) {
-        toast.success('Bank details updated successfully');
+        toast.success(user.bankDetail ? 'Bank updated' : 'Bank added');
         setShowBankModal(false);
         await fetchUserDetails();
       } else {
         toast.error(response.message || 'Update failed');
       }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Operation failed');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // --- Documents: bulk update (from modal) ---
+  const handleUpdateDocuments = async (paths) => {
+    setUpdating(true);
+    try {
+      const panDoc = user.documents?.find(d => d.title === 'PAN Card');
+      const aadharDoc = user.documents?.find(d => d.title === 'Aadhar Card');
+
+      if (paths.panPath && panDoc) {
+        await documentApi.update(panDoc.id, { filePath: paths.panPath });
+      }
+      if (paths.aadharPath && aadharDoc) {
+        await documentApi.update(aadharDoc.id, { filePath: paths.aadharPath });
+      }
+
+      toast.success('Documents updated successfully');
+      setShowDocumentModal(false);
+      await fetchUserDetails();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Update failed');
     } finally {
@@ -976,14 +1520,52 @@ const UserDetails = () => {
     }
   };
 
-  const handleUpdateDocuments = async (paths) => {
+  // --- Single document update (inline) ---
+  const handleSingleDocumentUpdate = async (docId, file, title) => {
     setUpdating(true);
     try {
-      toast.success('Documents updated successfully');
-      setShowDocumentModal(false);
-      await fetchUserDetails();
+      // Upload file
+      const uploadRes = await filesAPI.uploadSingle(file);
+      if (!uploadRes.data.success) {
+        toast.error('File upload failed');
+        return;
+      }
+      const newPath = uploadRes.data.data.filePath;
+
+      // Update document record
+      const response = await documentApi.update(docId, { filePath: newPath });
+      if (response.success) {
+        toast.success(`${title} updated successfully`);
+        await fetchUserDetails();
+      } else {
+        toast.error(response.message || `Failed to update ${title}`);
+      }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Update failed');
+      toast.error(error.response?.data?.message || `Failed to update ${title}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleAddSingleDocument = async (file, title) => {
+    setUpdating(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', user.id);
+      formData.append('type', 'kyc');
+      formData.append('title', title);
+      const response = await documentApi.upload(formData);
+      if (response.success) {
+        toast.success(`${title} uploaded successfully`);
+        if (title === 'PAN Card') setShowAddPanModal(false);
+        else setShowAddAadharModal(false);
+        await fetchUserDetails();
+      } else {
+        toast.error(response.message || `Failed to upload ${title}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || `Failed to upload ${title}`);
     } finally {
       setUpdating(false);
     }
@@ -1018,8 +1600,6 @@ const UserDetails = () => {
       </div>
     );
   }
-
-  const hasEdit = (tabId) => ['profile', 'nominee', 'bank', 'documents'].includes(tabId);
 
   return (
     <div className="space-y-6">
@@ -1139,15 +1719,30 @@ const UserDetails = () => {
             <ProfileTab user={user} onEdit={() => setShowProfileModal(true)} />
           )}
           {activeTab === 'nominee' && (
-            <NomineeTab nominee={user.nominee} onEdit={() => setShowNomineeModal(true)} />
+            <NomineeTab
+              nominee={user.nominee}
+              onEdit={() => setShowNomineeModal(true)}
+              onCreate={() => setShowNomineeModal(true)} // opens same modal with null nominee
+            />
           )}
           {activeTab === 'bank' && (
-            <BankTab bank={user.bankDetail} onEdit={() => setShowBankModal(true)} />
+            <BankTab
+              bank={user.bankDetail}
+              onEdit={() => setShowBankModal(true)}
+              onCreate={() => setShowBankModal(true)} // opens same modal with null bank
+            />
           )}
           {activeTab === 'documents' && (
-            <DocumentsTab documents={user.documents} onEdit={() => setShowDocumentModal(true)} />
+            <DocumentsTab
+              documents={user.documents}
+              onEdit={() => setShowDocumentModal(true)}
+              onAddPan={() => setShowAddPanModal(true)}
+              onAddAadhar={() => setShowAddAadharModal(true)}
+              onUpdatePan={(docId, file) => handleSingleDocumentUpdate(docId, file, 'PAN Card')}
+              onUpdateAadhar={(docId, file) => handleSingleDocumentUpdate(docId, file, 'Aadhar Card')}
+            />
           )}
-          {activeTab === 'investments' && (
+                    {activeTab === 'investments' && (
             <InvestmentsTab investments={user.investments} />
           )}
           {activeTab === 'returns' && (
@@ -1170,7 +1765,7 @@ const UserDetails = () => {
       <EditNomineeModal
         isOpen={showNomineeModal}
         onClose={() => setShowNomineeModal(false)}
-        nominee={user.nominee}
+        nominee={user?.nominee || null}
         userId={user.id}
         onSubmit={handleUpdateNominee}
         isLoading={updating}
@@ -1178,7 +1773,7 @@ const UserDetails = () => {
       <EditBankModal
         isOpen={showBankModal}
         onClose={() => setShowBankModal(false)}
-        bank={user.bankDetail}
+        bank={user?.bankDetail || null}
         userId={user.id}
         onSubmit={handleUpdateBank}
         isLoading={updating}
@@ -1191,342 +1786,20 @@ const UserDetails = () => {
         onSubmit={handleUpdateDocuments}
         isLoading={updating}
       />
-    </div>
-  );
-};
-
-// ============================================================
-// Tab Components (with Edit Buttons)
-// ============================================================
-
-const ProfileTab = ({ user, onEdit }) => (
-  <div>
-    <div className="flex justify-between items-center mb-6">
-      <h3 className="font-semibold text-gray-700 text-lg">Profile Details</h3>
-      <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center gap-2 text-sm">
-        <FiEdit className="w-4 h-4" /> Edit
-      </button>
-    </div>
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-gray-500 flex items-center gap-2"><FiUser className="text-blue-500" /> Personal</h4>
-          <DetailItem label="Full Name" value={user.fullName} />
-          <DetailItem label="Email" value={user.email} />
-          <DetailItem label="Phone" value={user.phone || 'N/A'} />
-          <DetailItem label="Date of Birth" value={user.dateOfBirth ? formatDate(user.dateOfBirth) : 'N/A'} />
-          <DetailItem label="Senior Citizen" value={user.isSeniorCitizen ? 'Yes' : 'No'} />
-        </div>
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-gray-500 flex items-center gap-2"><FiMapPin className="text-green-500" /> Address & ID</h4>
-          <DetailItem label="Address" value={user.address || 'Not provided'} />
-          <DetailItem label="PAN" value={user.pan || 'Not provided'} />
-          <DetailItem label="Aadhar" value={user.aadhar || 'Not provided'} />
-          <DetailItem label="Batch ID" value={user.batchId || 'N/A'} />
-          <DetailItem label="Partner Type" value={user.partnerType || 'None'} />
-          <DetailItem label="Commission Rate" value={`${user.partnerCommissionRate || 0}%`} />
-        </div>
-      </div>
-      <div className="border-t pt-4">
-        <h4 className="text-sm font-medium text-gray-500 flex items-center gap-2"><FiLock className="text-red-500" /> Account Info</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-          <DetailItem label="Created By" value={user.creator?.fullName || 'System'} />
-          <DetailItem label="Member Since" value={formatDate(user.createdAt)} />
-          <DetailItem label="Last Updated" value={formatDate(user.updatedAt)} />
-          <DetailItem label="Status" value={user.isActive ? 'Active' : 'Inactive'} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const NomineeTab = ({ nominee, onEdit }) => {
-  if (!nominee) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <FiUserPlus className="w-8 h-8 text-gray-300" />
-        </div>
-        <p className="text-gray-500 font-medium">No nominee added for this user</p>
-        <p className="text-sm text-gray-400 mt-1">Nominee information will appear here once added</p>
-      </div>
-    );
-  }
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="font-semibold text-gray-700 text-lg">Nominee Details</h3>
-        <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg shadow-orange-500/30 flex items-center gap-2 text-sm">
-          <FiEdit className="w-4 h-4" /> Edit
-        </button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <DetailItem label="Full Name" value={nominee.fullName} />
-        <DetailItem label="Relation" value={nominee.relation} />
-        <DetailItem label="Phone" value={nominee.phone || 'N/A'} />
-        <DetailItem label="Email" value={nominee.email || 'N/A'} />
-        <DetailItem label="Address" value={nominee.address || 'Not provided'} />
-        <DetailItem label="Document" value={nominee.documentPath ? 'Uploaded' : 'Not uploaded'} />
-      </div>
-    </div>
-  );
-};
-
-const BankTab = ({ bank, onEdit }) => {
-  if (!bank) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <FiCreditCard className="w-8 h-8 text-gray-300" />
-        </div>
-        <p className="text-gray-500 font-medium">No bank details added for this user</p>
-        <p className="text-sm text-gray-400 mt-1">Bank information will appear here once added</p>
-      </div>
-    );
-  }
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="font-semibold text-gray-700 text-lg">Bank Details</h3>
-        <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-purple-500/30 flex items-center gap-2 text-sm">
-          <FiEdit className="w-4 h-4" /> Edit
-        </button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <DetailItem label="Account Holder" value={bank.accountHolderName} />
-        <DetailItem label="Bank Name" value={bank.bankName} />
-        <DetailItem label="Account Number" value={bank.accountNumber} />
-        <DetailItem label="IFSC Code" value={bank.ifscCode} />
-        <DetailItem label="Branch" value={bank.branch || 'N/A'} />
-        <DetailItem label="Account Type" value={bank.accountType || 'Savings'} />
-        <DetailItem label="Verified" value={bank.isVerified ? 'Yes' : 'No'} />
-      </div>
-    </div>
-  );
-};
-
-const DocumentsTab = ({ documents, onEdit }) => {
-  const panDoc = documents?.find(d => d.title === 'PAN Card');
-  const aadharDoc = documents?.find(d => d.title === 'Aadhar Card');
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="font-semibold text-gray-700 text-lg">KYC Documents</h3>
-        <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center gap-2 text-sm">
-          <FiEdit className="w-4 h-4" /> Edit
-        </button>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300">
-          <p className="text-sm font-medium text-gray-700">PAN Card</p>
-          {panDoc ? (
-            <div className="mt-3 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
-              <FiFileText className="text-green-500" />
-              <span className="text-sm text-gray-600 truncate flex-1">{panDoc.filePath}</span>
-              <a href={`${VITE_BASE_URL}${panDoc.filePath}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400 mt-2">Not uploaded</p>
-          )}
-        </div>
-        <div className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300">
-          <p className="text-sm font-medium text-gray-700">Aadhar Card</p>
-          {aadharDoc ? (
-            <div className="mt-3 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
-              <FiFileText className="text-green-500" />
-              <span className="text-sm text-gray-600 truncate flex-1">{aadharDoc.filePath}</span>
-              <a href={`${VITE_BASE_URL}${aadharDoc.filePath}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-auto hover:underline">View</a>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400 mt-2">Not uploaded</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const InvestmentsTab = ({ investments }) => {
-  const totalAmount = investments?.reduce((sum, inv) => sum + parseFloat(inv.amount), 0) || 0;
-  const activeCount = investments?.filter(inv => inv.status === 'active').length || 0;
-  const maturedCount = investments?.filter(inv => inv.status === 'matured').length || 0;
-
-  return (
-    <div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 rounded-xl border border-blue-200/50">
-          <p className="text-sm text-blue-600 font-medium">Total Investments</p>
-          <p className="text-2xl font-bold text-blue-700">{investments?.length || 0}</p>
-        </div>
-        <div className="bg-gradient-to-br from-green-50 to-green-100/50 p-4 rounded-xl border border-green-200/50">
-          <p className="text-sm text-green-600 font-medium">Active</p>
-          <p className="text-2xl font-bold text-green-700">{activeCount}</p>
-        </div>
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 rounded-xl border border-purple-200/50">
-          <p className="text-sm text-purple-600 font-medium">Matured</p>
-          <p className="text-2xl font-bold text-purple-700">{maturedCount}</p>
-        </div>
-      </div>
-
-      {investments?.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 rounded-xl">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Investment Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Maturity Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {investments.map((inv, index) => (
-                <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium">{inv.plan?.name || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900">₹{parseFloat(inv.amount).toLocaleString()}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(inv.status)}`}>
-                      {inv.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(inv.investmentDate)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(inv.maturityDate)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <FiPieChart className="w-8 h-8 text-gray-300" />
-          </div>
-          <p className="text-gray-500 font-medium">No investments found</p>
-          <p className="text-sm text-gray-400 mt-1">Investment history will appear here</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const ReturnsTab = ({ returns }) => {
-  const totalReturns = returns?.reduce((sum, r) => sum + parseFloat(r.amount), 0) || 0;
-  const monthlyTotal = returns?.filter(r => r.type === 'monthly').reduce((sum, r) => sum + parseFloat(r.amount), 0) || 0;
-  const bonusTotal = returns?.filter(r => r.type === 'annual_bonus').reduce((sum, r) => sum + parseFloat(r.amount), 0) || 0;
-  const offerTotal = returns?.filter(r => r.type === 'offer').reduce((sum, r) => sum + parseFloat(r.amount), 0) || 0;
-
-  return (
-    <div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 rounded-xl border border-blue-200/50">
-          <p className="text-sm text-blue-600 font-medium">Total Returns</p>
-          <p className="text-2xl font-bold text-blue-700">₹{totalReturns.toLocaleString()}</p>
-        </div>
-        <div className="bg-gradient-to-br from-green-50 to-green-100/50 p-4 rounded-xl border border-green-200/50">
-          <p className="text-sm text-green-600 font-medium">Monthly</p>
-          <p className="text-2xl font-bold text-green-700">₹{monthlyTotal.toLocaleString()}</p>
-        </div>
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 rounded-xl border border-purple-200/50">
-          <p className="text-sm text-purple-600 font-medium">Annual Bonus</p>
-          <p className="text-2xl font-bold text-purple-700">₹{bonusTotal.toLocaleString()}</p>
-        </div>
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 p-4 rounded-xl border border-orange-200/50">
-          <p className="text-sm text-orange-600 font-medium">Offer</p>
-          <p className="text-2xl font-bold text-orange-700">₹{offerTotal.toLocaleString()}</p>
-        </div>
-      </div>
-
-      {returns?.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 rounded-xl">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Month</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {returns.map((ret, index) => (
-                <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(ret.month)}</td>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900">₹{parseFloat(ret.amount).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-sm capitalize text-gray-600">{ret.type?.replace('_', ' ') || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{ret.description || '-'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${ret.paidOn ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {ret.paidOn ? 'Paid' : 'Pending'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <FiDollarSign className="w-8 h-8 text-gray-300" />
-          </div>
-          <p className="text-gray-500 font-medium">No returns found</p>
-          <p className="text-sm text-gray-400 mt-1">Returns history will appear here</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const HistoryTab = ({ user }) => (
-  <div className="space-y-4">
-    <div className="border-l-4 border-blue-500 pl-4 py-3 bg-blue-50/30 rounded-r-lg">
-      <p className="text-sm text-gray-600">Created: <span className="font-medium">{formatDate(user.createdAt)}</span></p>
-      <p className="text-sm text-gray-600">Last Updated: <span className="font-medium">{formatDate(user.updatedAt)}</span></p>
-    </div>
-    <div className="space-y-3">
-      <h3 className="font-semibold text-gray-700 flex items-center gap-2"><FiActivity className="text-blue-500" /> Activity Log</h3>
-      <div className="space-y-2">
-        <div className="flex items-center gap-3 text-sm p-3 bg-gray-50 rounded-lg">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span className="text-gray-700">User registered</span>
-          <span className="text-gray-400 ml-auto">{formatDate(user.createdAt)}</span>
-        </div>
-        {user.investments?.map((inv, index) => (
-          <div key={index} className="flex items-center gap-3 text-sm p-3 bg-gray-50 rounded-lg">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span className="text-gray-700">Investment of ₹{parseFloat(inv.amount).toLocaleString()} in {inv.plan?.name || 'N/A'}</span>
-            <span className="text-gray-400 ml-auto">{formatDate(inv.investmentDate)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-// ============================================================
-// Detail Item Component
-// ============================================================
-const DetailItem = ({ label, value, icon: Icon }) => {
-  if (!value || value === 'N/A' || value === '' || value === 'Not provided' || value === 'None') {
-    return (
-      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl transition-all duration-200 hover:bg-gray-100/70">
-        <div className="flex-1">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
-          <p className="text-sm text-gray-400">Not provided</p>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30 transition-all duration-200">
-      {Icon && <Icon className="text-gray-400 mt-0.5 w-4 h-4" />}
-      <div className="flex-1">
-        <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
-        <p className="text-sm font-medium text-gray-800">{value}</p>
-      </div>
+      <AddDocumentModal
+        isOpen={showAddPanModal}
+        onClose={() => setShowAddPanModal(false)}
+        title="PAN Card"
+        onUpload={(file) => handleAddSingleDocument(file, 'PAN Card')}
+        isLoading={updating}
+      />
+      <AddDocumentModal
+        isOpen={showAddAadharModal}
+        onClose={() => setShowAddAadharModal(false)}
+        title="Aadhar Card"
+        onUpload={(file) => handleAddSingleDocument(file, 'Aadhar Card')}
+        isLoading={updating}
+      />
     </div>
   );
 };
