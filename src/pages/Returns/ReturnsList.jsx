@@ -175,7 +175,9 @@ const ReturnsAndCommissions = () => {
     amount: '',
     type: 'monthly',
     description: '',
-    paidOn: ''
+    paidOn: '',
+    status: 'pending',
+    roi: ''
   });
   const [userError, setUserError] = useState('');
   const [investmentError, setInvestmentError] = useState('');
@@ -213,7 +215,7 @@ const ReturnsAndCommissions = () => {
       await fetchCommissions();
       setInitialLoad(false);
     };
-    
+
     fetchInitialData();
   }, []);
 
@@ -294,21 +296,21 @@ const ReturnsAndCommissions = () => {
   const fetchAllReturnsData = async () => {
     try {
       // Fetch all returns with a large limit to get all data
-      const response = await returnApi.getAll({ 
+      const response = await returnApi.getAll({
         limit: 1000,
         offset: 0
       });
-      
+
       if (response.success) {
         const allReturns = response.data.returns || [];
-        
+
         // Calculate counts from the data
         setAllReturnsCount(allReturns.length);
-        
+
         // Count pending returns (where paidOn is null or empty)
         const pendingCount = allReturns.filter(ret => !ret.paidOn).length;
         setPendingReturnsCount(pendingCount);
-        
+
         // Set the returns for the current tab
         if (isPendingReturnsTab) {
           const pendingReturns = allReturns.filter(ret => !ret.paidOn);
@@ -359,20 +361,20 @@ const ReturnsAndCommissions = () => {
 
       if (response.success) {
         let allReturns = response.data.returns || [];
-        
+
         // Filter based on tab
         let filteredReturns = allReturns;
         let totalCount = allReturns.length;
-        
+
         if (isPendingReturnsTab) {
           filteredReturns = allReturns.filter(ret => !ret.paidOn);
           totalCount = filteredReturns.length;
         }
-        
+
         // Apply search filter
         if (returnSearch) {
           const searchLower = returnSearch.toLowerCase();
-          filteredReturns = filteredReturns.filter(ret => 
+          filteredReturns = filteredReturns.filter(ret =>
             (ret.user?.fullName && ret.user.fullName.toLowerCase().includes(searchLower)) ||
             (ret.user?.email && ret.user.email.toLowerCase().includes(searchLower)) ||
             (ret.user?.batchId && ret.user.batchId.toLowerCase().includes(searchLower)) ||
@@ -380,17 +382,17 @@ const ReturnsAndCommissions = () => {
           );
           totalCount = filteredReturns.length;
         }
-        
+
         // Apply type filter
         if (typeFilter) {
           filteredReturns = filteredReturns.filter(ret => ret.type === typeFilter);
           totalCount = filteredReturns.length;
         }
-        
+
         // Paginate the results
         const startIndex = (page - 1) * limit;
         const paginatedReturns = filteredReturns.slice(startIndex, startIndex + limit);
-        
+
         setReturns(paginatedReturns);
         setReturnPagination({
           total: totalCount,
@@ -486,9 +488,16 @@ const ReturnsAndCommissions = () => {
         amount: parseFloat(returnFormData.amount),
         type: returnFormData.type,
         description: returnFormData.description || null,
-        paidOn: returnFormData.paidOn || null
+        paidOn: returnFormData.paidOn || null,
       };
 
+      // ✅ Include ROI only if provided
+      if (returnFormData.roi !== '') {
+        payload.ROI = parseFloat(returnFormData.roi);
+      }
+      if (editingReturn) {
+        payload.status = returnFormData.status || 'pending';
+      }
       let response;
       if (editingReturn) {
         response = await returnApi.update(editingReturn.id, payload);
@@ -521,7 +530,9 @@ const ReturnsAndCommissions = () => {
       amount: returnItem.amount,
       type: returnItem.type,
       description: returnItem.description || '',
-      paidOn: returnItem.paidOn ? returnItem.paidOn.split('T')[0] : ''
+      paidOn: returnItem.paidOn ? returnItem.paidOn.split('T')[0] : '',
+      status: returnItem.status || 'pending',
+      roi: returnItem.ROI || ''
     });
     setShowReturnModal(true);
   };
@@ -582,7 +593,9 @@ const ReturnsAndCommissions = () => {
       amount: '',
       type: 'monthly',
       description: '',
-      paidOn: ''
+      paidOn: '',
+      status: 'pending',
+      roi: '',
     });
     setFilteredInvestments([]);
     setEditingReturn(null);
@@ -800,7 +813,7 @@ const ReturnsAndCommissions = () => {
                 onChange={(e) => setReturnFormData({ ...returnFormData, investmentId: e.target.value })}
                 className={`input-field w-full ${investmentError ? 'border-red-500' : ''}`}
                 required
-                disabled={!returnFormData.userId}
+                disabled={!returnFormData.userId || !!editingReturn} // ✅ disabled when editing
               >
                 <option value="">Select Investment</option>
                 {filteredInvestments.map(inv => (
@@ -878,6 +891,39 @@ const ReturnsAndCommissions = () => {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ROI (%) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                value={returnFormData.roi}
+                onChange={(e) => setReturnFormData({ ...returnFormData, roi: e.target.value })}
+                className="input-field w-full"
+                placeholder="e.g., 2.5"
+                min="0"
+                step="0.01"
+                required={!!editingReturn} // optional: make required only when editing
+              />
+            </div>
+            {/* Status dropdown – only when editing */}
+            {editingReturn && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={returnFormData.status}
+                  onChange={(e) => setReturnFormData({ ...returnFormData, status: e.target.value })}
+                  className="input-field w-full"
+                  required
+                >
+                  <option value="pending">Pending</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            )}
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -920,8 +966,7 @@ const ReturnsAndCommissions = () => {
               {editingReturn ? 'Update Return' : 'Create Return'}
             </button>
           </div>
-        </form>
-      </div>
+        </form>      </div>
     </div>
   );
 
@@ -1459,11 +1504,10 @@ const ReturnsAndCommissions = () => {
         <nav className="flex space-x-8" aria-label="Tabs">
           <button
             onClick={() => setActiveTab(TAB_ALL_RETURNS)}
-            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-              activeTab === TAB_ALL_RETURNS
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === TAB_ALL_RETURNS
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <FaWallet className="w-4 h-4" />
             All Returns
@@ -1474,11 +1518,10 @@ const ReturnsAndCommissions = () => {
 
           <button
             onClick={() => setActiveTab(TAB_PENDING_RETURNS)}
-            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-              activeTab === TAB_PENDING_RETURNS
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === TAB_PENDING_RETURNS
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <FaCalendarCheck className="w-4 h-4" />
             Pending Returns
@@ -1489,11 +1532,10 @@ const ReturnsAndCommissions = () => {
 
           <button
             onClick={() => setActiveTab(TAB_ALL_COMMISSIONS)}
-            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-              activeTab === TAB_ALL_COMMISSIONS
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === TAB_ALL_COMMISSIONS
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <FaHandshake className="w-4 h-4" />
             All Partner Payouts
@@ -1504,11 +1546,10 @@ const ReturnsAndCommissions = () => {
 
           <button
             onClick={() => setActiveTab(TAB_PENDING_COMMISSIONS)}
-            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-              activeTab === TAB_PENDING_COMMISSIONS
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === TAB_PENDING_COMMISSIONS
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <FaMoneyBillWave className="w-4 h-4" />
             Pending Partner Payouts

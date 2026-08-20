@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { adminApi } from '../../api/adminApi';
 import { nomineeApi } from '../../api/nomineeApi';
 import { authApi } from '../../api/authApi';
-import { documentApi } from '../../api/documentApi';
+import { documentApi } from '../../api/documentApi'; 
 import { filesAPI } from '../../api/files';
 import {
   FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiMapPin,
@@ -12,14 +12,14 @@ import {
   FiDownload, FiFileText, FiAward, FiPieChart, FiDollarSign, FiClock,
   FiCheckCircle, FiXCircle, FiLink, FiImage, FiFile, FiActivity,
   FiUsers, FiBriefcase, FiStar, FiX, FiUpload, FiTrash2, FiAlertCircle,
-  FiBook, FiGlobe, FiHash
+  FiBook, FiGlobe, FiHash,
 } from 'react-icons/fi';
-import { FaSpinner } from 'react-icons/fa';
+import { FaSpinner,FaUpload } from 'react-icons/fa';
 import { formatDate, getStatusColor, getInitials } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
-// const VITE_BASE_URL = "http://localhost:3000/";
-const VITE_BASE_URL = "http://service.kkfinsure.org/";
+const VITE_BASE_URL = "http://localhost:3000/";
+// const VITE_BASE_URL = "http://service.kkfinsure.org/";
 
 // ============================================================
 // Edit Profile Modal (unchanged)
@@ -1099,7 +1099,17 @@ const BankTab = ({ bank, onEdit, onCreate }) => {
   );
 };
 
-const DocumentsTab = ({ documents, onEdit, onAddPan, onAddAadhar, onUpdatePan, onUpdateAadhar }) => {
+const DocumentsTab = ({
+  documents,
+  investments = [],
+  companyDocuments = [],
+  onEdit,
+  onAddPan,
+  onAddAadhar,
+  onUpdatePan,
+  onUpdateAadhar,
+  onUpdateInvestmentDoc // (investmentId, docType, file)
+}) => {
   const panDoc = documents?.find(d => d.title === 'PAN Card');
   const aadharDoc = documents?.find(d => d.title === 'Aadhar Card');
 
@@ -1123,15 +1133,29 @@ const DocumentsTab = ({ documents, onEdit, onAddPan, onAddAadhar, onUpdatePan, o
     e.target.value = '';
   };
 
+  const handleInvestmentDocUpload = (investmentId, docType, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only images and PDFs allowed');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Max size 10MB');
+      return;
+    }
+    onUpdateInvestmentDoc(investmentId, docType, file);
+    e.target.value = '';
+  };
+
   return (
     <div>
+      {/* KYC Documents */}
       <div className="flex justify-between items-center mb-6">
         <h3 className="font-semibold text-gray-700 text-lg">KYC Documents</h3>
-        {/* <button onClick={onEdit} className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 flex items-center gap-2 text-sm">
-          <FiEdit className="w-4 h-4" /> Edit Both
-        </button> */}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {/* PAN Card */}
         <div className="border-2 border-gray-200 rounded-xl p-5 transition-all duration-300 hover:border-blue-300">
           <div className="flex justify-between items-start">
@@ -1194,6 +1218,132 @@ const DocumentsTab = ({ documents, onEdit, onAddPan, onAddAadhar, onUpdatePan, o
           )}
         </div>
       </div>
+
+      {/* Investment Documents */}
+      {investments.length > 0 && ( 
+        <div className="mt-8">
+          <h3 className="font-semibold text-gray-700 text-lg mb-4">Investment Documents</h3>
+          <div className="space-y-6">
+            {investments.map((inv) => (
+              <div key={inv.id} className="border-2 border-gray-200 rounded-xl p-5">
+                <p className="font-medium text-gray-800 mb-3">
+                  Investment #{inv.InvestmentCode || inv.id.slice(0, 8)}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Agreement */}
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <label className="block text-sm font-medium text-gray-700">Agreement</label>
+                    {inv.agreementDoc ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <FiBriefcase className="text-blue-500" />
+                        <a href={`${VITE_BASE_URL}${inv.agreementDoc}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate flex-1">View</a>
+                        <label className="cursor-pointer text-sm text-green-600 hover:text-green-700 flex items-center gap-1">
+                          <FaUpload className="w-3 h-3" /> Replace
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                            onChange={(e) => handleInvestmentDocUpload(inv.id, 'agreement', e)}
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className="mt-1 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 cursor-pointer">
+                        <FaUpload className="w-3 h-3" /> Upload
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                          onChange={(e) => handleInvestmentDocUpload(inv.id, 'agreement', e)}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Certificate */}
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <label className="block text-sm font-medium text-gray-700">Certificate</label>
+                    {inv.certificateDoc ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <FiBriefcase className="text-blue-500" />
+                        <a href={`${VITE_BASE_URL}${inv.certificateDoc}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate flex-1">View</a>
+                        <label className="cursor-pointer text-sm text-green-600 hover:text-green-700 flex items-center gap-1">
+                          <FaUpload className="w-3 h-3" /> Replace
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                            onChange={(e) => handleInvestmentDocUpload(inv.id, 'certificate', e)}
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className="mt-1 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 cursor-pointer">
+                        <FaUpload className="w-3 h-3" /> Upload
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                          onChange={(e) => handleInvestmentDocUpload(inv.id, 'certificate', e)}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Post-Cheque */}
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <label className="block text-sm font-medium text-gray-700">Post-Cheque</label>
+                    {inv.postChequeDoc ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <FiBriefcase className="text-blue-500" />
+                        <a href={`${VITE_BASE_URL}${inv.postChequeDoc}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate flex-1">View</a>
+                        <label className="cursor-pointer text-sm text-green-600 hover:text-green-700 flex items-center gap-1">
+                          <FaUpload className="w-3 h-3" /> Replace
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                            onChange={(e) => handleInvestmentDocUpload(inv.id, 'postCheque', e)}
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className="mt-1 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 cursor-pointer">
+                        <FaUpload className="w-3 h-3" /> Upload
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                          onChange={(e) => handleInvestmentDocUpload(inv.id, 'postCheque', e)}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Company Documents */}
+      {companyDocuments.length > 0 && (
+        <div className="mt-8">
+          <h3 className="font-semibold text-gray-700 text-lg mb-4">Company Documents</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {companyDocuments.map((doc) => (
+              <div key={doc.id} className="border-2 border-gray-200 rounded-xl p-4">
+                <p className="font-medium text-gray-800">{doc.title}</p>
+                <p className="text-xs text-gray-500 mt-1">{doc.type}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <FiFileText className="text-blue-500" />
+                  <a href={`${VITE_BASE_URL}${doc.filePath}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate flex-1">View</a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1390,6 +1540,8 @@ const UserDetails = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
   const [updating, setUpdating] = useState(false);
+  const [companyDocuments, setCompanyDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showNomineeModal, setShowNomineeModal] = useState(false);
@@ -1402,7 +1554,17 @@ const UserDetails = () => {
 
   useEffect(() => {
     fetchUserDetails();
+    fetchCompanyDocuments();
   }, [id]);
+
+  const fetchCompanyDocuments = async () => {
+    try {
+      const response = await documentApi.getCompanyDocuments();
+      if (response.success) setCompanyDocuments(response.data);
+    } catch (error) {
+      console.error('Failed to fetch company documents');
+    }
+  };
 
   const fetchUserDetails = async () => {
     setLoading(true);
@@ -1571,6 +1733,50 @@ const UserDetails = () => {
     }
   };
 
+  const handleUpdateInvestmentDoc = async (docType, file) => {
+    if (!file) return;
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only images and PDFs allowed');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Max size 10MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const uploadRes = await filesAPI.uploadSingle(file);
+      if (!uploadRes.data.success) {
+        toast.error('File upload failed');
+        return;
+      }
+      const newPath = uploadRes.data.data.filePath;
+
+      const updateData = {
+        agreementDoc: investment.agreementDoc || '',
+        certificateDoc: investment.certificateDoc || '',
+        postChequeDoc: investment.postChequeDoc || '',
+      };
+      if (docType === 'agreement') updateData.agreementDoc = newPath;
+      else if (docType === 'certificate') updateData.certificateDoc = newPath;
+      else if (docType === 'postCheque') updateData.postChequeDoc = newPath;
+
+      const response = await investmentApi.uploadDocs(id, updateData);
+      if (response.success) {
+        toast.success(`${docType} document updated`);
+        fetchInvestmentDetails();
+      } else {
+        toast.error(response.message || 'Failed to update document');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: FiUser },
     { id: 'nominee', label: 'Nominee', icon: FiUserPlus },
@@ -1700,11 +1906,10 @@ const UserDetails = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 text-sm font-medium flex items-center gap-2 transition-all ${
-                  activeTab === tab.id
+                className={`px-6 py-4 text-sm font-medium flex items-center gap-2 transition-all ${activeTab === tab.id
                     ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
@@ -1735,14 +1940,15 @@ const UserDetails = () => {
           {activeTab === 'documents' && (
             <DocumentsTab
               documents={user.documents}
-              onEdit={() => setShowDocumentModal(true)}
+              investments={user.investments || []}
+              companyDocuments={companyDocuments}
               onAddPan={() => setShowAddPanModal(true)}
               onAddAadhar={() => setShowAddAadharModal(true)}
               onUpdatePan={(docId, file) => handleSingleDocumentUpdate(docId, file, 'PAN Card')}
               onUpdateAadhar={(docId, file) => handleSingleDocumentUpdate(docId, file, 'Aadhar Card')}
-            />
-          )}
-                    {activeTab === 'investments' && (
+              onUpdateInvestmentDoc={handleUpdateInvestmentDoc}
+            />)}
+          {activeTab === 'investments' && (
             <InvestmentsTab investments={user.investments} />
           )}
           {activeTab === 'returns' && (

@@ -1,10 +1,128 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import { documentApi } from '../../api/documentApi';
 import SearchBar from '../../components/common/SearchBar';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { FaUpload, FaTrash, FaDownload, FaFileAlt, FaImage, FaFilePdf } from 'react-icons/fa';
+import { FaUpload, FaTrash, FaDownload, FaFileAlt, FaImage, FaFilePdf,FaSearch } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import { adminApi } from '../../api/adminApi';
+
+// ---- AutocompleteInput Component ----
+const AutocompleteInput = ({
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+  required = false,
+  displayKey = 'fullName',
+  searchKeys = ['fullName', 'email', 'phone', 'batchId'],
+  error
+}) => {
+  const [inputValue, setInputValue] = useState('');
+  const [filteredOptions, setFilteredOptions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const wrapperRef = useRef(null);
+
+  const selectedOption = options?.find(opt => opt?.id === value);
+
+  useEffect(() => {
+    if (selectedOption) {
+      setInputValue(selectedOption[displayKey] || '');
+    } else {
+      setInputValue('');
+    }
+  }, [value, selectedOption]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    if (val.length > 0) {
+      const lower = val.toLowerCase();
+      const filtered = options.filter(opt =>
+        searchKeys.some(key =>
+          opt[key] && opt[key].toString().toLowerCase().includes(lower)
+        )
+      );
+      setFilteredOptions(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredOptions([]);
+      setShowDropdown(false);
+      onChange(null);
+    }
+  };
+
+  const handleSelect = (option) => {
+    setInputValue(option[displayKey] || '');
+    setShowDropdown(false);
+    onChange(option.id);
+  };
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => {
+            if (inputValue.length > 0) {
+              const lower = inputValue.toLowerCase();
+              const filtered = options.filter(opt =>
+                searchKeys.some(key =>
+                  opt[key] && opt[key].toString().toLowerCase().includes(lower)
+                )
+              );
+              setFilteredOptions(filtered);
+              setShowDropdown(true);
+            } else {
+              setFilteredOptions(options);
+              setShowDropdown(true);
+            }
+          }}
+          className={`input-field w-full ${error ? 'border-red-500' : ''}`}
+          placeholder={placeholder}
+        />
+        <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      </div>
+      {showDropdown && filteredOptions.length > 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {filteredOptions.map(opt => (
+            <div
+              key={opt.id}
+              className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
+              onClick={() => handleSelect(opt)}
+            >
+              <div className="font-medium text-gray-800">{opt.fullName}</div>
+              <div className="text-xs text-gray-500 flex gap-2 flex-wrap">
+                <span>{opt.email}</span>
+                {opt.phone && <span>· {opt.phone}</span>}
+                {opt.batchId && <span>· {opt.batchId}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+};
 
 const DocumentsList = () => {
   const [documents, setDocuments] = useState([]);
@@ -13,11 +131,25 @@ const DocumentsList = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadData, setUploadData] = useState({ title: '', type: 'other' });
+  const [uploadData, setUploadData] = useState({ title: '', type: 'other',userId:'' });
+  const [users, setUsers] = useState([]);
+
 
   useEffect(() => {
     fetchDocuments();
+    fetchUsers();
   }, [typeFilter]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await adminApi.getUsersDropdown();
+      if (response.success) {
+        setUsers(response.data.users || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users');
+    }
+  };
 
   const fetchDocuments = async () => {
     setLoading(true);
@@ -52,6 +184,7 @@ const DocumentsList = () => {
     formData.append('file', selectedFile);
     formData.append('title', uploadData.title);
     formData.append('type', uploadData.type);
+    { uploadData.userId && formData.append('userId', uploadData.userId);}
 
     try {
       const response = await documentApi.upload(formData);
@@ -142,6 +275,17 @@ const DocumentsList = () => {
                 required
               />
             </div>
+            <div>
+              <AutocompleteInput
+                label="User"
+                placeholder="Type to search user..."
+                options={users}
+                value={uploadData.userId}
+                onChange={(id) => setReturnFormData({ ...returnFormData, userId: id })}
+                required
+              />
+            </div>
+
           </div>
           <button
             type="submit"
