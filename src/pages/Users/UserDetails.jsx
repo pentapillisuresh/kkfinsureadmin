@@ -18,8 +18,8 @@ import { FaSpinner,FaUpload } from 'react-icons/fa';
 import { formatDate, getStatusColor, getInitials } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
-const VITE_BASE_URL = "http://localhost:3000/";
-// const VITE_BASE_URL = "http://service.kkfinsure.org/";
+// const VITE_BASE_URL = "http://localhost:3000/";
+const VITE_BASE_URL = "http://service.kkfinsure.org/";
 
 // ============================================================
 // Edit Profile Modal (unchanged)
