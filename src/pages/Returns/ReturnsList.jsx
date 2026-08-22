@@ -11,6 +11,17 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { FaCheckCircle, FaMoneyBillWave, FaTimes, FaWallet, FaHandshake, FaCalendarCheck, FaFileInvoice, FaPlus, FaEdit, FaTrash, FaEye, FaSearch } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { adminApi } from '../../api/adminApi';
+import { debounce } from 'lodash';
+
+// ---- Debounce helper (or use lodash) ----
+const useDebounce = (value, delay = 500) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+};
 
 // ---- AutocompleteInput Component ----
 const AutocompleteInput = ({
@@ -152,17 +163,19 @@ const ReturnsAndCommissions = () => {
 
   // ---- Returns state ----
   const [returns, setReturns] = useState([]);
-  const [returnPagination, setReturnPagination] = useState({ total: 0, page: 0, limit: 20, totalPages: 0 });
+  const [returnPagination, setReturnPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [allReturnsCount, setAllReturnsCount] = useState(0);
   const [pendingReturnsCount, setPendingReturnsCount] = useState(0);
   const [returnSearch, setReturnSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const debouncedReturnSearch = useDebounce(returnSearch, 400);
 
   // ---- Commissions state ----
   const [commissions, setCommissions] = useState([]);
   const [commissionPagination, setCommissionPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [commissionSearch, setCommissionSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const debouncedCommissionSearch = useDebounce(commissionSearch, 400);
 
   // ---- Modals ----
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -203,33 +216,41 @@ const ReturnsAndCommissions = () => {
 
   // ---- Fetch initial data ----
   useEffect(() => {
-    const fetchInitialData = async () => {
-      await Promise.all([
-        fetchUsers(),
-        fetchAllInvestments(),
-        fetchOffers(),
-        fetchPartners()
-      ]);
-      // After fetching initial data, fetch returns and commissions
-      await fetchAllReturnsData();
-      await fetchCommissions();
-      setInitialLoad(false);
+    const fetchInitial = async () => {
+      try {
+        const [usersRes, investmentsRes, offersRes, partnersRes] = await Promise.all([
+          adminApi.getUsersDropdown(),
+          investmentApi.getAll({ limit: 1000 }),
+          offerApi.getAll(),
+          adminApi.getUsersDropdown(),
+        ]);
+        if (usersRes.success) setUsers(usersRes.data.users || []);
+        if (investmentsRes.success) setAllInvestments(investmentsRes.data.investments || []);
+        if (offersRes.success) setOffers(offersRes.data || []);
+        if (partnersRes.success) {
+          const all = partnersRes.data.users || [];
+          setPartners(all.filter(u => u.partnerType !== 'none'));
+        }
+      } catch (error) {
+        console.error('Initial data fetch error:', error);
+      }
     };
-
-    fetchInitialData();
+    fetchInitial();
   }, []);
 
-  // ---- Fetch data when tab or pagination changes ----
+  // ---- Fetch returns when tab, page, search, or type changes ----
   useEffect(() => {
-    if (!initialLoad) {
-      if (activeTab === TAB_ALL_RETURNS || activeTab === TAB_PENDING_RETURNS) {
-        fetchReturns();
-      }
-      if (activeTab === TAB_ALL_COMMISSIONS || activeTab === TAB_PENDING_COMMISSIONS) {
-        fetchCommissions();
-      }
+    if (activeTab === TAB_ALL_RETURNS || activeTab === TAB_PENDING_RETURNS) {
+      fetchReturns();
     }
-  }, [activeTab, returnPagination.page, returnSearch, typeFilter, commissionPagination.page, commissionSearch, statusFilter, initialLoad]);
+  }, [activeTab, returnPagination.page, debouncedReturnSearch, typeFilter]);
+
+  // ---- Fetch commissions when tab, page, search, or status changes ----
+  useEffect(() => {
+    if (activeTab === TAB_ALL_COMMISSIONS || activeTab === TAB_PENDING_COMMISSIONS) {
+      fetchCommissions();
+    }
+  }, [activeTab, commissionPagination.page, debouncedCommissionSearch, statusFilter]);
 
   // ---- Filter investments when user changes ----
   useEffect(() => {
@@ -340,73 +361,48 @@ const ReturnsAndCommissions = () => {
   // ---- Returns fetch with pagination ----
   const fetchReturns = useCallback(async () => {
     setLoading(true);
-
     try {
       const page = returnPagination.page;
       const limit = returnPagination.limit;
-      const offset = 0;
+      const offset = (page - 1) * limit;
+
       const params = {
         offset,
         limit,
-        search: returnSearch || undefined,
         type: typeFilter || undefined,
+        search: debouncedReturnSearch || undefined,
       };
 
-      // For pending tab, fetch all and filter client-side
-      const response = await returnApi.getAll({
-        ...params,
-        limit: 1000 // Get all data to filter properly
-      });
-
-      if (response.success) {
-        let allReturns = response.data.returns || [];
-
-        // Filter based on tab
-        let filteredReturns = allReturns;
-        let totalCount = allReturns.length;
-
+      // If pending tab, we use the status filter on backend (assuming backend supports status)
+      if (isPendingReturnsTab) {
+        params.status = 'pending'; // if backend supports filtering by status
         if (isPendingReturnsTab) {
-          filteredReturns = allReturns.filter(ret => !ret.paidOn);
-          totalCount = filteredReturns.length;
+          // filteredReturns = allReturns.filter(ret => !ret.paidOn);
+          // totalCount = filteredReturns.length;
         }
+      }
 
-        // Apply search filter
-        if (returnSearch) {
-          const searchLower = returnSearch.toLowerCase();
-          filteredReturns = filteredReturns.filter(ret =>
-            (ret.user?.fullName && ret.user.fullName.toLowerCase().includes(searchLower)) ||
-            (ret.user?.email && ret.user.email.toLowerCase().includes(searchLower)) ||
-            (ret.user?.batchId && ret.user.batchId.toLowerCase().includes(searchLower)) ||
-            (ret.investmentId && ret.investmentId.toString().toLowerCase().includes(searchLower))
-          );
-          totalCount = filteredReturns.length;
-        }
-
-        // Apply type filter
-        if (typeFilter) {
-          filteredReturns = filteredReturns.filter(ret => ret.type === typeFilter);
-          totalCount = filteredReturns.length;
-        }
-
-        // Paginate the results
-        const startIndex = (page - 1) * limit;
-        const paginatedReturns = filteredReturns.slice(startIndex, startIndex + limit);
-
-        setReturns(paginatedReturns);
+      const response = await returnApi.getAll(params);
+      if (response.success) {
+        const { total, limit: resLimit, page: resPage } = response.data.pagination;
+        setReturns(response.data.returns || []);
         setReturnPagination({
-          total: totalCount,
-          page: page,
-          limit: limit,
-          totalPages: Math.ceil(totalCount / limit)
+          total,
+          page: resPage || page,
+          limit: resLimit,
+          totalPages: Math.ceil(total / resLimit),
         });
+      } else {
+        toast.error(response.message || 'Failed to fetch returns');
       }
     } catch (error) {
-      console.error('Failed to fetch returns:', error);
+      console.error('fetchReturns error:', error);
       toast.error('Failed to fetch returns');
     } finally {
       setLoading(false);
     }
-  }, [isPendingReturnsTab, returnPagination.page, returnPagination.limit, returnSearch, typeFilter]);
+  }, [returnPagination.page, returnPagination.limit, typeFilter, debouncedReturnSearch, isPendingReturnsTab]);
+
 
   // ---- Commissions fetch with filters ----
   const fetchCommissions = useCallback(async () => {
@@ -444,7 +440,7 @@ const ReturnsAndCommissions = () => {
     } finally {
       setLoading(false);
     }
-  }, [isPendingCommissionsTab, commissionPagination.page, commissionPagination.limit, commissionSearch, statusFilter]);
+  }, [commissionPagination.page, commissionPagination.limit, statusFilter, debouncedCommissionSearch, isPendingCommissionsTab]);
 
   // ---- Search handlers ----
   const handleReturnSearch = () => {
@@ -1525,7 +1521,7 @@ const ReturnsAndCommissions = () => {
             <FaCalendarCheck className="w-4 h-4" />
             Pending Returns
             <span className="bg-gray-100 text-gray-600 ml-2 px-2 py-0.5 rounded-full text-xs">
-              {pendingReturnsCount}
+            {returnPagination.total}
             </span>
           </button>
 
