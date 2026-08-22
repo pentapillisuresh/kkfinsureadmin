@@ -152,7 +152,7 @@ const ReturnsAndCommissions = () => {
 
   // ---- Returns state ----
   const [returns, setReturns] = useState([]);
-  const [returnPagination, setReturnPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
+  const [returnPagination, setReturnPagination] = useState({ total: 0, page: 0, limit: 20, totalPages: 0 });
   const [allReturnsCount, setAllReturnsCount] = useState(0);
   const [pendingReturnsCount, setPendingReturnsCount] = useState(0);
   const [returnSearch, setReturnSearch] = useState('');
@@ -297,8 +297,8 @@ const ReturnsAndCommissions = () => {
     try {
       // Fetch all returns with a large limit to get all data
       const response = await returnApi.getAll({
-        limit: 1000,
-        offset: 0
+        limit: returnPagination.limit,
+        offset: returnPagination.page
       });
 
       if (response.success) {
@@ -344,8 +344,7 @@ const ReturnsAndCommissions = () => {
     try {
       const page = returnPagination.page;
       const limit = returnPagination.limit;
-      const offset = (page - 1) * limit;
-
+      const offset = 0;
       const params = {
         offset,
         limit,

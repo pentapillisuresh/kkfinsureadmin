@@ -20,7 +20,8 @@ export const returnApi = {
 
   // READ (All - Admin)
   getAll: async (params) => {
-    const response = await apiClient.get('/returns', { params });
+    console.log("return parama::",params)
+    const response = await apiClient.get('/returns', {params} );
     return response.data;
   },
 

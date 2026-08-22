@@ -2,8 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
 import StatsCard from '../components/common/StatsCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { FaUsers, FaWallet, FaMoneyBillWave, FaTicketAlt } from 'react-icons/fa';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import {
+  FaUsers, FaWallet, FaMoneyBillWave, FaTicketAlt,
+  FaChartLine, FaPiggyBank, FaHandshake, FaClock,
+} from 'react-icons/fa';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer, PieChart, Pie, Cell,
+} from 'recharts';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
@@ -12,9 +18,8 @@ const Dashboard = () => {
   const [recentUsers, setRecentUsers] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [pieData, setPieData] = useState([]);
-  const [totalReturns, setTotalReturns] = useState(0);
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b'];
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
   useEffect(() => {
     fetchDashboardData();
@@ -24,21 +29,36 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const response = await adminApi.getDashboard();
-      
+
       if (response.success) {
         const { stats, monthlyActivity, investmentOverview, recentUsers } = response.data;
-        
+
+        // Store all stats
         setStats({
+          // Users
           totalUsers: stats.totalUsers,
           newUsersThisMonth: stats.newUsersThisMonth,
+
+          // Investments
           activeInvestments: stats.activeInvestments,
-          returnsThisMonth: stats.totalReturnsThisMonth,
-          pendingTickets: stats.pendingTickets,
+          maturedInvestments: stats.maturedInvestments,
+          totalInvestments: stats.totalInvestments,
+          totalInvestedAmount: stats.totalInvestedAmount,
+
+          // Returns
+          pendingReturnsCurrentMonth: stats.pendingReturnsCurrentMonth,
+          paidReturnsCurrentMonth: stats.paidReturnsCurrentMonth,
+          overallPendingReturns: stats.overallPendingReturns,
+          overallPaidReturns: stats.overallPaidReturns,
           totalReturnsOverall: stats.totalReturnsOverall,
+
+          // Commissions
+          totalCommissionPaid: stats.totalCommissionPaid,
+
+          // Tickets
+          pendingTickets: stats.pendingTickets,
         });
-        
-        setTotalReturns(stats.totalReturnsOverall);
-        
+
         // Transform monthlyActivity for bar chart
         const chartData = monthlyActivity.map(item => ({
           month: item.month,
@@ -46,14 +66,14 @@ const Dashboard = () => {
           investments: item.newInvestments,
         }));
         setMonthlyData(chartData);
-        
+
         // Transform investmentOverview for pie chart
         const pieChartData = investmentOverview.map(item => ({
           name: item.status.charAt(0).toUpperCase() + item.status.slice(1),
           value: item.count,
         }));
         setPieData(pieChartData);
-        
+
         setRecentUsers(recentUsers || []);
       } else {
         toast.error(response.message || 'Failed to load dashboard data');
@@ -74,6 +94,7 @@ const Dashboard = () => {
     );
   }
 
+  // Stats cards configuration
   const statCards = [
     {
       title: 'Total Users',
@@ -83,36 +104,59 @@ const Dashboard = () => {
       change: `+${stats?.newUsersThisMonth || 0} this month`,
     },
     {
-      title: 'Active Investments',
-      value: stats?.activeInvestments || 0,
+      title: 'Total Investments',
+      value: stats?.totalInvestments || 0,
       icon: FaWallet,
-      color: 'bg-green-500',
-      change: `${pieData.find(d => d.name === 'Active')?.value || 0} active`,
+      color: 'bg-indigo-500',
+      change: `₹${(stats?.totalInvestedAmount || 0).toLocaleString()} invested`,
     },
     {
-      title: 'Total Returns',
-      value: `₹${(stats?.returnsThisMonth || 0).toLocaleString()}`,
+      title: 'Active Investments',
+      value: stats?.activeInvestments || 0,
+      icon: FaChartLine,
+      color: 'bg-green-500',
+      change: `${stats?.maturedInvestments || 0} matured`,
+    },
+    {
+      title: 'Returns (Current Month)',
+      value: `₹${(stats?.pendingReturnsCurrentMonth || 0).toLocaleString()}`,
+      icon: FaClock,
+      color: 'bg-yellow-500',
+      change: `Paid: ₹${(stats?.paidReturnsCurrentMonth || 0).toLocaleString()}`,
+    },
+    {
+      title: 'Returns (Overall)',
+      value: `₹${(stats?.overallPendingReturns || 0).toLocaleString()}`,
       icon: FaMoneyBillWave,
       color: 'bg-purple-500',
-      change: `₹${(stats?.totalReturnsOverall || 0).toLocaleString()} overall`,
+      change: `Paid: ₹${(stats?.overallPaidReturns || 0).toLocaleString()}`,
+    },
+    {
+      title: 'Commission Paid',
+      value: `₹${(stats?.totalCommissionPaid || 0).toLocaleString()}`,
+      icon: FaHandshake,
+      color: 'bg-teal-500',
+      change: 'Total commissions disbursed',
     },
     {
       title: 'Pending Tickets',
       value: stats?.pendingTickets || 0,
       icon: FaTicketAlt,
-      color: 'bg-orange-500',
+      color: 'bg-red-500',
       change: stats?.pendingTickets > 0 ? 'Need attention' : 'All resolved',
     },
   ];
 
   return (
     <div className="space-y-6">
+      {/* Stats Cards Grid – 4 columns on large, 2 on medium, 1 on small */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat) => (
           <StatsCard key={stat.title} {...stat} />
         ))}
       </div>
 
+      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 card">
           <h3 className="text-lg font-semibold mb-4">Monthly Activity</h3>
@@ -157,6 +201,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Recent Users Table */}
       <div className="card">
         <h3 className="text-lg font-semibold mb-4">Recent Users</h3>
         <div className="overflow-x-auto">
