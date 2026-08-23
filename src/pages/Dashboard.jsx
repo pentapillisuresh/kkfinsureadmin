@@ -21,6 +21,12 @@ const Dashboard = () => {
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
+  const currentMonthName = new Date().toLocaleString('en-US', {
+    month: 'short',
+  });
+
+  const currentYear = new Date().getFullYear();
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -118,25 +124,39 @@ const Dashboard = () => {
       change: `${stats?.maturedInvestments || 0} matured`,
     },
     {
-      title: 'Returns (Current Month)',
-      value: `₹${(stats?.pendingReturnsCurrentMonth || 0).toLocaleString()}`,
+      title: 'Paid Returns',
+      value: `₹${(stats?.paidReturnsCurrentMonth || 0).toLocaleString()}`,
       icon: FaClock,
       color: 'bg-yellow-500',
-      change: `Paid: ₹${(stats?.paidReturnsCurrentMonth || 0).toLocaleString()}`,
+      change: `Paid Returns - ${currentMonthName} ${currentYear}`,
     },
     {
-      title: 'Returns (Overall)',
+      title: 'Pending Returns',
+      value: `₹${(stats?.pendingReturnsCurrentMonth || 0).toLocaleString()}`,
+      icon: FaClock,
+      color: 'bg-red-500',
+      change: `Pending Returns - ${currentMonthName} ${currentYear}`
+    },
+    {
+      title: 'Paid Returns (Overall)',
+      value: `₹${(stats?.overallPaidReturns || 0).toLocaleString()}`,
+      icon: FaMoneyBillWave,
+      color: 'bg-purple-500',
+      change: 'Overall Paid Returns',
+    },
+    {
+      title: 'Pending Returns (Overall)',
       value: `₹${(stats?.overallPendingReturns || 0).toLocaleString()}`,
       icon: FaMoneyBillWave,
       color: 'bg-purple-500',
-      change: `Paid: ₹${(stats?.overallPaidReturns || 0).toLocaleString()}`,
+      change: 'Overall Pending Returns',
     },
     {
-      title: 'Commission Paid',
+      title: 'Referrer Payout Paid',
       value: `₹${(stats?.totalCommissionPaid || 0).toLocaleString()}`,
       icon: FaHandshake,
       color: 'bg-teal-500',
-      change: 'Total commissions disbursed',
+      change: 'Total Referrer Payout disbursed',
     },
     {
       title: 'Pending Tickets',
@@ -230,11 +250,10 @@ const Dashboard = () => {
                     <td className="py-3 px-4 text-sm">{user.phone || 'N/A'}</td>
                     <td className="py-3 px-4 text-sm">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          user.isActive
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${user.isActive
                             ? 'bg-green-100 text-green-700'
                             : 'bg-red-100 text-red-700'
-                        }`}
+                          }`}
                       >
                         {user.isActive ? 'Active' : 'Inactive'}
                       </span>

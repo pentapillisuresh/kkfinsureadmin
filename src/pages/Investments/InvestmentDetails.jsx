@@ -4,8 +4,8 @@ import { investmentApi } from '../../api/investmentApi';
 import { filesAPI } from '../../api/files';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
-import { 
-  FaArrowLeft, FaTrash, FaCheckCircle, 
+import {
+  FaArrowLeft, FaTrash, FaCheckCircle,
   FaMoneyBillWave, FaCalendar, FaUser, FaChartLine,
   FaFileAlt, FaUpload, FaEdit
 } from 'react-icons/fa';
@@ -277,25 +277,25 @@ const InvestmentDetails = () => {
 
           {/* Static Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <DetailItem 
-              icon={FaUser} 
-              label="User" 
-              value={investment.user?.fullName || 'N/A'} 
+            <DetailItem
+              icon={FaUser}
+              label="User"
+              value={investment.user?.fullName || 'N/A'}
             />
-            <DetailItem 
-              icon={FaChartLine} 
-              label="Plan" 
-              value={investment.plan?.name || 'N/A'} 
+            <DetailItem
+              icon={FaChartLine}
+              label="Plan"
+              value={investment.plan?.name || 'N/A'}
             />
-            <DetailItem 
-              icon={FaCalendar} 
-              label="Investment Date" 
-              value={formatDate(investment.investmentDate)} 
+            <DetailItem
+              icon={FaCalendar}
+              label="Investment Date"
+              value={formatDate(investment.investmentDate)}
             />
-            <DetailItem 
-              icon={FaCalendar} 
-              label="Maturity Date" 
-              value={formatDate(investment.maturityDate)} 
+            <DetailItem
+              icon={FaCalendar}
+              label="Maturity Date"
+              value={formatDate(investment.maturityDate)}
             />
           </div>
 
@@ -406,18 +406,29 @@ const InvestmentDetails = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {returns.map((ret) => (
-                      <tr key={ret.id} className="border-b border-gray-100">
-                        <td className="p-2">{formatDate(ret.month)}</td>
-                        <td className="p-2 font-medium">₹{parseFloat(ret.amount).toLocaleString()}</td>
-                        <td className="p-2">{ret.ROI || '—'}</td>
-                        <td className="p-2 capitalize">{ret.type?.replace('_', ' ') || '—'}</td>
-                        <td className="p-2">
-                          <StatusBadge status={ret.paidOn ? 'paid' : 'pending'} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                    {[...returns]
+                      .sort((a, b) => parseFloat(a.ROI || 0) - parseFloat(b.ROI || 0))
+                      .map((ret) => (
+                        <tr key={ret.id} className="border-b border-gray-100">
+                          <td className="p-2">{formatDate(ret.month)}</td>
+
+                          <td className="p-2 font-medium">
+                            ₹{parseFloat(ret.amount || 0).toLocaleString()}
+                          </td>
+
+                          <td className="p-2">
+                            {ret.ROI != null ? `${parseInt(ret.ROI, 10)}%` : '—'}
+                          </td>
+
+                          <td className="p-2 capitalize">
+                            {ret.type?.replace('_', ' ') || '—'}
+                          </td>
+
+                          <td className="p-2">
+                            <StatusBadge status={ret.paidOn ? 'paid' : 'pending'} />
+                          </td>
+                        </tr>
+                      ))}                  </tbody>
                 </table>
               </div>
             </div>

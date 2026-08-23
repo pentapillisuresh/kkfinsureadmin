@@ -60,6 +60,11 @@ export const returnApi = {
     return response.data;
   },
 
+  delete: async (id) => {
+    const response = await apiClient.delete(`/returns/${id}`);
+    return response.data;
+  },
+
   // BATCH MARK AS PAID
   batchMarkAsPaid: async (ids) => {
     const response = await apiClient.put('/returns/batch/pay', { ids });
