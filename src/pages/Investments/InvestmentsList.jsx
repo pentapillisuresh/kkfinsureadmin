@@ -109,12 +109,12 @@ const InvestmentsList = () => {
   // Search handler - with debounce to avoid too many API calls
   const handleSearch = (value) => {
     setSearch(value);
-    
+
     // Clear any existing timeout
     if (window.searchTimeout) {
       clearTimeout(window.searchTimeout);
     }
-    
+
     // Set a timeout to delay the search (500ms debounce)
     window.searchTimeout = setTimeout(() => {
       setSearchTerm(value); // Update the actual search term
@@ -218,7 +218,7 @@ const InvestmentsList = () => {
 
       toast.error(
         error.response?.data?.message ||
-          'Failed to create investment'
+        'Failed to create investment'
       );
     }
   };
@@ -469,6 +469,16 @@ const InvestmentsList = () => {
           />
         </div>
       )}
+
+      {/* Modals */}
+      <CreateInvestmentModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreate}
+        plans={plans}
+      />
+
+
     </div>
   );
 };
