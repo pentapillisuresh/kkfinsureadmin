@@ -50,9 +50,14 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           className={`h-8 w-auto object-contain ${isOpen && 'hidden'}`}
         />
         {isOpen && (
-          <span className="text-xs text-white mt-1 tracking-wider">
-            Wealth | Trust | Growth
-          </span>
+          <div className="flex flex-col items-center mt-1">
+            <span className="text-[10px] text-white font-medium tracking-wide">
+              Asset - Wealth Management
+            </span>
+            <span className="text-[9px] text-primary-300 tracking-wider">
+              Wealth | Trust | Growth
+            </span>
+          </div>
         )}
       </div>
 

@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { FaUser, FaLock, FaSpinner } from 'react-icons/fa';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -30,15 +32,33 @@ const Login = () => {
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-white text-2xl font-bold">K</span>
+            {/* Logo */}
+            <img 
+              src="/images/logo3.jpeg" 
+              alt="Logo" 
+              className="mx-auto h-16 w-auto mb-2"
+            />
+            
+            {/* Text Below Logo */}
+            <div className="flex flex-col items-center">
+              <p className="text-sm font-semibold text-gray-800">
+                Asset - Wealth Management
+              </p>
+              <p className="text-xs text-gray-500">
+                Wealth | Trust | Growth
+              </p>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+            
+            <h1 className="text-2xl font-bold text-gray-900 mt-4">Admin Dashboard</h1>
             <p className="text-gray-500 mt-1">Sign in to manage your platform</p>
           </div>
 
@@ -67,13 +87,24 @@ const Login = () => {
               <div className="relative">
                 <FaLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-field pl-10"
+                  className="input-field pl-10 pr-12"
                   placeholder="Enter your password"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </button>
               </div>
             </div>
 
