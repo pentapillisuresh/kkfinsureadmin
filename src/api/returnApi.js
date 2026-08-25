@@ -20,7 +20,8 @@ export const returnApi = {
 
   // READ (All - Admin)
   getAll: async (params) => {
-    const response = await apiClient.get('/returns', { params });
+    console.log("return parama::",params)
+    const response = await apiClient.get('/returns', {params} );
     return response.data;
   },
 
@@ -56,6 +57,11 @@ export const returnApi = {
 
   update: async (id,data) => {
     const response = await apiClient.put(`/returns/${id}`,data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await apiClient.delete(`/returns/${id}`);
     return response.data;
   },
 
