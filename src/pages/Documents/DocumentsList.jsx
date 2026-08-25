@@ -131,7 +131,7 @@ const DocumentsList = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadData, setUploadData] = useState({ title: '', type: 'other',userId:'' });
+  const [uploadData, setUploadData] = useState({ title: '', type: 'company',userId:'' });
   const [users, setUsers] = useState([]);
 
 
@@ -260,8 +260,8 @@ const DocumentsList = () => {
                 onChange={(e) => setUploadData({ ...uploadData, type: e.target.value })}
                 className="input-field"
               >
-                <option value="kyc">KYC</option>
-                <option value="agreement">Agreement</option>
+                {/* <option value="kyc">KYC</option>
+                <option value="agreement">Agreement</option> */}
                 <option value="company">Company</option>
                 <option value="other">Other</option>
               </select>
@@ -275,7 +275,7 @@ const DocumentsList = () => {
                 required
               />
             </div>
-            <div>
+            {/* <div>
               <AutocompleteInput
                 label="User"
                 placeholder="Type to search user..."
@@ -284,7 +284,7 @@ const DocumentsList = () => {
                 onChange={(id) => setReturnFormData({ ...returnFormData, userId: id })}
                 required
               />
-            </div>
+            </div> */}
 
           </div>
           <button
@@ -309,8 +309,8 @@ const DocumentsList = () => {
           className="input-field max-w-xs"
         >
           <option value="">All Types</option>
-          <option value="kyc">KYC</option>
-          <option value="agreement">Agreement</option>
+          {/* <option value="kyc">KYC</option> */}
+          {/* <option value="agreement">Agreement</option> */}
           <option value="company">Company</option>
           <option value="other">Other</option>
         </select>

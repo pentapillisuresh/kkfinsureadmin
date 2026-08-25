@@ -79,7 +79,7 @@ const NomineesList = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl font-bold text-gray-900">Nominees</h2>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -87,7 +87,7 @@ const NomineesList = () => {
         >
           <FaPlus /> Add Nominee
         </button>
-      </div>
+      </div> */}
 
       <SearchBar
         value={search}
