@@ -19,7 +19,7 @@ import { formatDate, getStatusColor, getInitials } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
 // const VITE_BASE_URL = "http://localhost:3000/";
-const VITE_BASE_URL = "http://service.kkfinsure.org/";
+const VITE_BASE_URL = "https://service.kkfinsure.org/";
 
 // ============================================================
 // Edit Profile Modal (unchanged)
@@ -1006,7 +1006,7 @@ const ProfileTab = ({ user, onEdit }) => (
           <DetailItem label="Aadhar" value={user.aadhar || 'Not provided'} />
           <DetailItem label="Batch ID" value={user.batchId || 'N/A'} />
           <DetailItem label="Partner Type" value={user.partnerType || 'None'} />
-          <DetailItem label="Commission Rate" value={`${user.partnerCommissionRate || 0}%`} />
+          <DetailItem label="Referrer Payout" value={`${user.partnerCommissionRate || 0}%`} />
         </div>
       </div>
       <div className="border-t pt-4">
@@ -1890,7 +1890,7 @@ const UserDetails = () => {
         </div>
         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100/50 p-4 rounded-xl border border-yellow-200/50">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-yellow-600 font-medium">Commission Rate</p>
+            <p className="text-sm text-yellow-600 font-medium">Referrer Payout</p>
             <div className="w-8 h-8 bg-yellow-500/10 rounded-lg flex items-center justify-center"><FiStar className="text-yellow-600" /></div>
           </div>
           <p className="text-lg font-bold text-yellow-700 mt-1">{user.partnerCommissionRate || 0}%</p>

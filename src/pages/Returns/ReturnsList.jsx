@@ -31,6 +31,7 @@ const AutocompleteInput = ({
   value,
   onChange,
   required = false,
+  disabled = false,
   displayKey = 'fullName',
   searchKeys = ['fullName', 'email', 'phone', 'batchId'],
   error
@@ -97,6 +98,7 @@ const AutocompleteInput = ({
           type="text"
           value={inputValue}
           onChange={handleInputChange}
+          disabled={disabled}
           onFocus={() => {
             if (inputValue.length > 0) {
               const lower = inputValue.toLowerCase();
@@ -794,7 +796,9 @@ const ReturnsAndCommissions = () => {
                 options={users}
                 value={returnFormData.userId}
                 onChange={(id) => setReturnFormData({ ...returnFormData, userId: id })}
-                required
+                required 
+                displayKey='fullName'
+                disabled={!!editingReturn} // ✅ disabled when editing
                 error={userError}
               />
             </div>

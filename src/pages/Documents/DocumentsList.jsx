@@ -134,6 +134,8 @@ const DocumentsList = () => {
   const [uploadData, setUploadData] = useState({ title: '', type: 'company',userId:'' });
   const [users, setUsers] = useState([]);
 
+// const VITE_BASE_URL = "http://localhost:3000/";
+const VITE_BASE_URL = "https://service.kkfinsure.org/";
 
   useEffect(() => {
     fetchDocuments();
@@ -363,8 +365,9 @@ const DocumentsList = () => {
 
               <div className="mt-4 flex items-center gap-2">
                 <a
-                  href={doc.filePath}
+                  href={`${VITE_BASE_URL}${doc.filePath}`}
                   target="_blank"
+                  download
                   rel="noopener noreferrer"
                   className="btn-secondary flex-1 flex items-center justify-center gap-2 text-sm py-1.5"
                 >

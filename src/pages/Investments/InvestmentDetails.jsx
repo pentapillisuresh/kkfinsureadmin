@@ -2,17 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { investmentApi } from '../../api/investmentApi';
 import { filesAPI } from '../../api/files';
+import axios from 'axios';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
 import {
   FaArrowLeft, FaTrash, FaCheckCircle,
   FaMoneyBillWave, FaCalendar, FaUser, FaChartLine,
-  FaFileAlt, FaUpload, FaEdit
+  FaFileAlt, FaUpload, FaEdit, FaSpinner
 } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-// const VITE_BASE_URL = "http://localhost:3000/";
-const VITE_BASE_URL = "http://service.kkfinsure.org/";
+const VITE_BASE_URL = "https://service.kkfinsure.org/";
 
 const InvestmentDetails = () => {
   const { id } = useParams();
@@ -22,6 +22,8 @@ const InvestmentDetails = () => {
   const [uploading, setUploading] = useState(false);
   const [editingCode, setEditingCode] = useState(false);
   const [newCode, setNewCode] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingDocType, setUploadingDocType] = useState(null);
 
   useEffect(() => {
     fetchInvestmentDetails();
@@ -90,7 +92,7 @@ const InvestmentDetails = () => {
     }
   };
 
-  // ---- Document Upload ----
+  // ---- Document Upload with Progress ----
   const handleDocUpload = async (docType, file) => {
     if (!file) return;
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
@@ -104,14 +106,39 @@ const InvestmentDetails = () => {
     }
 
     setUploading(true);
+    setUploadingDocType(docType);
+    setUploadProgress(0);
+
     try {
-      const uploadRes = await filesAPI.uploadSingle(file);
+      // 1. Upload file with progress tracking
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = localStorage.getItem('adminToken');
+      const uploadRes = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'https://service.kkfinsure.org'}/files/single`,
+        formData,
+        {
+          headers: { 
+            Authorization : `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
+        }
+      );
+
       if (!uploadRes.data.success) {
         toast.error('File upload failed');
+        setUploading(false);
+        setUploadingDocType(null);
+        setUploadProgress(0);
         return;
       }
+
       const newPath = uploadRes.data.data.filePath;
 
+      // 2. Update investment with new doc path
       const updateData = {
         agreementDoc: investment.agreementDoc || '',
         certificateDoc: investment.certificateDoc || '',
@@ -132,6 +159,8 @@ const InvestmentDetails = () => {
       toast.error(error.response?.data?.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setUploadingDocType(null);
+      setUploadProgress(0);
     }
   };
 
@@ -324,59 +353,87 @@ const InvestmentDetails = () => {
             </div>
           )}
 
-          {/* Documents */}
+          {/* Documents with Progress Bar */}
           <div className="mt-4 p-4 border-2 border-gray-200 rounded-xl">
             <h5 className="font-semibold mb-3">Documents</h5>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { key: 'agreement', label: 'Agreement', doc: investment.agreementDoc },
-                { key: 'certificate', label: 'Certificate', doc: investment.certificateDoc },
+                { key: 'certificate', label: 'Maturity Certificate', doc: investment.certificateDoc },
                 { key: 'postCheque', label: 'Post-Cheque', doc: investment.postChequeDoc },
-              ].map(({ key, label, doc }) => (
-                <div key={key} className="p-3 bg-gray-50 rounded-lg">
-                  <label className="block text-sm font-medium text-gray-700">{label}</label>
-                  {doc ? (
-                    <div className="mt-1 flex items-center gap-2">
-                      <FaFileAlt className="text-blue-500" />
-                      <a
-                        href={`${VITE_BASE_URL}${doc}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline truncate flex-1"
-                      >
-                        View
-                      </a>
-                      <label className="cursor-pointer text-sm text-green-600 hover:text-green-700 flex items-center gap-1">
-                        <FaUpload className="w-3 h-3" /> Replace
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
-                          onChange={(e) => {
-                            if (e.target.files[0]) handleDocUpload(key, e.target.files[0]);
-                            e.target.value = '';
-                          }}
-                          disabled={uploading}
+              ].map(({ key, label, doc }) => {
+                const isUploading = uploadingDocType === key;
+                const progress = uploadProgress;
+
+                return (
+                  <div key={key} className="p-3 bg-gray-50 rounded-lg">
+                    <label className="block text-sm font-medium text-gray-700">{label}</label>
+                    {doc ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <FaFileAlt className="text-blue-500" />
+                        <a
+                          href={`${VITE_BASE_URL}${doc}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline truncate flex-1"
+                        >
+                          View
+                        </a>
+                        {isUploading ? (
+                          <span className="text-sm text-blue-600 flex items-center gap-1">
+                            <FaSpinner className="animate-spin" /> {progress}%
+                          </span>
+                        ) : (
+                          <label className="cursor-pointer text-sm text-green-600 hover:text-green-700 flex items-center gap-1">
+                            <FaUpload className="w-3 h-3" /> Replace
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                              onChange={(e) => {
+                                if (e.target.files[0]) handleDocUpload(key, e.target.files[0]);
+                                e.target.value = '';
+                              }}
+                              disabled={uploading}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    ) : (
+                      isUploading ? (
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="text-sm text-blue-600 flex items-center gap-1">
+                            <FaSpinner className="animate-spin" /> Uploading {progress}%
+                          </span>
+                        </div>
+                      ) : (
+                        <label className="mt-1 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 cursor-pointer">
+                          <FaUpload className="w-3 h-3" /> Upload
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                            onChange={(e) => {
+                              if (e.target.files[0]) handleDocUpload(key, e.target.files[0]);
+                              e.target.value = '';
+                            }}
+                            disabled={uploading}
+                          />
+                        </label>
+                      )
+                    )}
+                    {/* Progress Bar */}
+                    {isUploading && (
+                      <div className="mt-2 w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                          style={{ width: `${progress}%` }}
                         />
-                      </label>
-                    </div>
-                  ) : (
-                    <label className="mt-1 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 cursor-pointer">
-                      <FaUpload className="w-3 h-3" /> Upload
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
-                        onChange={(e) => {
-                          if (e.target.files[0]) handleDocUpload(key, e.target.files[0]);
-                          e.target.value = '';
-                        }}
-                        disabled={uploading}
-                      />
-                    </label>
-                  )}
-                </div>
-              ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -411,24 +468,21 @@ const InvestmentDetails = () => {
                       .map((ret) => (
                         <tr key={ret.id} className="border-b border-gray-100">
                           <td className="p-2">{formatDate(ret.month)}</td>
-
                           <td className="p-2 font-medium">
                             ₹{parseFloat(ret.amount || 0).toLocaleString()}
                           </td>
-
                           <td className="p-2">
                             {ret.ROI != null ? `${parseInt(ret.ROI, 10)}%` : '—'}
                           </td>
-
                           <td className="p-2 capitalize">
                             {ret.type?.replace('_', ' ') || '—'}
                           </td>
-
                           <td className="p-2">
                             <StatusBadge status={ret.paidOn ? 'paid' : 'pending'} />
                           </td>
                         </tr>
-                      ))}                  </tbody>
+                      ))}
+                  </tbody>
                 </table>
               </div>
             </div>
