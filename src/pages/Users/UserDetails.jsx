@@ -997,6 +997,7 @@ const ProfileTab = ({ user, onEdit }) => (
           <DetailItem label="Email" value={user.email} />
           <DetailItem label="Phone" value={user.phone || 'N/A'} />
           <DetailItem label="Date of Birth" value={user.dateOfBirth ? formatDate(user.dateOfBirth) : 'N/A'} />
+          {user.passwordHint && <DetailItem label="Password Hint" value={user.passwordHint || 'None'} />}
           <DetailItem label="Senior Citizen" value={user.isSeniorCitizen ? 'Yes' : 'No'} />
         </div>
         <div className="space-y-3">
