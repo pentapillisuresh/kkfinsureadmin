@@ -13,6 +13,7 @@ import {
   FiCheckCircle, FiXCircle, FiLink, FiImage, FiFile, FiActivity,
   FiUsers, FiBriefcase, FiStar, FiX, FiUpload, FiTrash2, FiAlertCircle,
   FiBook, FiGlobe, FiHash,
+  FiKey,
 } from 'react-icons/fi';
 import { FaSpinner,FaUpload } from 'react-icons/fa';
 import { formatDate, getStatusColor, getInitials } from '../../utils/helpers';
@@ -28,6 +29,8 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
+    email:'',
+    password:'',
     dateOfBirth: '',
     pan: '',
     aadhar: '',
@@ -44,6 +47,8 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
       setFormData({
         fullName: user.fullName || '',
         phone: user.phone || '',
+        email: user.email || '',
+        password: user.passwordHint || '',
         dateOfBirth: user.dateOfBirth ? user.dateOfBirth.split('T')[0] : '',
         pan: user.pan || '',
         aadhar: user.aadhar || '',
@@ -129,6 +134,23 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <div className="relative group">
+                <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+                  required
+                  placeholder="E-mail"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                 Date of Birth
               </label>
               <div className="relative group">
@@ -137,6 +159,21 @@ const EditProfileModal = ({ isOpen, onClose, user, onSubmit, isLoading }) => {
                   type="date"
                   name="dateOfBirth"
                   value={formData.dateOfBirth}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+              Password
+              </label>
+              <div className="relative group">
+                <FiKey className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" size={18} />
+                <input
+                  type="text"
+                  name="password"
+                  value={formData.password}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm transition-all duration-200 outline-none focus:bg-white focus:border-blue-500 focus:shadow-lg focus:shadow-blue-500/10"
                 />
